@@ -1,4 +1,4 @@
-package app
+package main
 
 import (
 	"github.com/IBM/sarama"
@@ -22,8 +22,20 @@ func main() {
 	err = broker.Open(config)
 	if err != nil {
 		logger.Error("failed to open broker", zap.Error(err))
+	} else {
+		logger.Info("Successfully opened broker")
+	}
+
+	connected, err := broker.Connected()
+	if err != nil {
+		logger.Error("failed to check if broker is connected", zap.Error(err))
+	}
+
+	if connected {
+		logger.Info("Broker is connected")
+	} else {
+		logger.Info("Broker is not connected")
 	}
 
 	defer logger.Sync()
-
 }
