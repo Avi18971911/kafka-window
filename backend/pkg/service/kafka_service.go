@@ -6,21 +6,35 @@ import (
 )
 
 type KafkaService struct {
-	broker *sarama.Broker
+	client sarama.Client
 	logger *zap.Logger
 }
 
-func NewKafkaService(broker *sarama.Broker, logger *zap.Logger) *KafkaService {
+func NewKafkaService(logger *zap.Logger, client sarama.Client) *KafkaService {
 	return &KafkaService{
-		broker: broker,
 		logger: logger,
+		client: client,
 	}
 }
 
-func (k *KafkaService) Close() error {
-	err := k.broker.Close()
+func (k *KafkaService) Start() error {
+	return nil
+}
+
+func (k *KafkaService) GetTopics() ([]string, error) {
+	topics, err := k.client.Topics()
 	if err != nil {
-		k.logger.Error("failed to close broker", zap.Error(err))
+		k.logger.Error("KafkaService can't get topics: failed to get topics", zap.Error(err))
+		return nil, err
 	}
-	return err
+	return topics, nil
+}
+
+func (k *KafkaService) Close() error {
+	err := k.client.Close()
+	if err != nil {
+		k.logger.Error("KafkaService can't close: failed to close client", zap.Error(err))
+		return err
+	}
+	return nil
 }
