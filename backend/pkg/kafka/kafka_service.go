@@ -1,0 +1,295 @@
+package kafka
+
+import (
+	"bytes"
+	"encoding/gob"
+	"fmt"
+	"github.com/IBM/sarama"
+	"go.uber.org/zap"
+	"kafka-window.com/pkg/kafka/model"
+)
+
+type KafkaService struct {
+	client sarama.Client
+	admin  sarama.ClusterAdmin
+	logger *zap.Logger
+}
+
+func NewKafkaService(
+	logger *zap.Logger,
+	client sarama.Client,
+	admin sarama.ClusterAdmin,
+) *KafkaService {
+	return &KafkaService{
+		logger: logger,
+		client: client,
+		admin:  admin,
+	}
+}
+
+func (k *KafkaService) Start() error {
+	return nil
+}
+
+func (k *KafkaService) GetTopics() ([]string, error) {
+	topics, err := k.client.Topics()
+	if err != nil {
+		k.logger.Error("KafkaService can't get topics: failed to get topics", zap.Error(err))
+		return nil, err
+	}
+	return topics, nil
+}
+
+func (k *KafkaService) GetConsumerGroups() ([]string, error) {
+	consumerToTypeMap, err := k.admin.ListConsumerGroups()
+	if err != nil {
+		k.logger.Error("KafkaService can't get consumers: failed to get consumers", zap.Error(err))
+		return nil, fmt.Errorf("failed to get consumer groups: %w", err)
+	}
+	consumers := make([]string, len(consumerToTypeMap))
+	i := 0
+	for consumer, _ := range consumerToTypeMap {
+		consumers[i] = consumer
+		i++
+	}
+	return consumers, nil
+}
+
+func (k *KafkaService) GetConsumerGroupsDetailsListeningToTopic(topic string) ([]model.ConsumerGroupDetails, error) {
+	consumerGroups, err := k.GetConsumerGroups()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get consumer groups listening to topic %s: %w", topic, err)
+	}
+
+	consumerGroupDetailsMap := make(map[string]*model.ConsumerGroupDetails)
+
+	consumerGroupToConsumersToTopicToPartitionsMap, err :=
+		k.getConsumerGroupToConsumersToTopicsToPartitionsMap(consumerGroups, map[string]bool{topic: true})
+	if err != nil {
+		k.logger.Error(
+			"%s failed to get consumer group details for topic",
+			zap.String("topic", topic),
+			zap.Error(err),
+		)
+		return nil, fmt.Errorf("failed to get consumer group details for topic %s: %w", topic, err)
+	}
+
+	for consumerGroup, consumersToTopicToPartitionsMap := range consumerGroupToConsumersToTopicToPartitionsMap {
+		topicPartitionsMap := k.getTopicPartitionsMap(consumersToTopicToPartitionsMap)
+		consumerToTopicToPartitionOffsetsMap, err := k.getConsumerToTopicToPartitionOffsetsMap(
+			consumerGroup,
+			consumersToTopicToPartitionsMap,
+			topicPartitionsMap,
+		)
+		if err != nil {
+			k.logger.Error(
+				"failed to get consumer group details",
+				zap.String("consumerGroup", consumerGroup),
+				zap.Error(err),
+			)
+			continue
+		}
+
+		consumerDetails := make([]model.ConsumerDetails, 0, len(consumerToTopicToPartitionOffsetsMap))
+		for consumer, topicToPartitionOffsetsMap := range consumerToTopicToPartitionOffsetsMap {
+			for _, partitionOffsetsMap := range topicToPartitionOffsetsMap {
+				for _, offsets := range partitionOffsetsMap {
+					consumerDetails = append(consumerDetails, model.ConsumerDetails{
+						MemberId:            consumer,
+						LastCommittedOffset: offsets.LastCommittedOffset,
+						HighWaterMark:       offsets.HighWaterMark,
+					})
+				}
+			}
+		}
+		consumerGroupDetailsMap[consumerGroup] = &model.ConsumerGroupDetails{
+			GroupId:         consumerGroup,
+			ConsumerDetails: consumerDetails,
+		}
+	}
+
+	consumerGroupDetails := make([]model.ConsumerGroupDetails, 0, len(consumerGroupDetailsMap))
+	for _, details := range consumerGroupDetailsMap {
+		consumerGroupDetails = append(consumerGroupDetails, *details)
+	}
+
+	return consumerGroupDetails, nil
+}
+
+func (k *KafkaService) Close() error {
+	err := k.admin.Close()
+	if err != nil {
+		k.logger.Error("KafkaService can't close: failed to close admin and client", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+func (k *KafkaService) getConsumerGroupToConsumersToTopicsToPartitionsMap(
+	consumerGroups []string,
+	topicsToInclude map[string]bool,
+) (map[string]map[string]map[string]map[int32]bool, error) {
+	returnMap := make(map[string]map[string]map[string]map[int32]bool)
+
+	consumerGroupDescription, err := k.admin.DescribeConsumerGroups(consumerGroups)
+	if err != nil {
+		k.logger.Error("failed to get consumer group descriptions", zap.Error(err))
+		return nil, fmt.Errorf("failed to get consumer group descriptions: %w", err)
+	}
+	for _, description := range consumerGroupDescription {
+		if _, exists := returnMap[description.GroupId]; !exists {
+			returnMap[description.GroupId] = make(map[string]map[string]map[int32]bool)
+		}
+		for _, member := range description.Members {
+			if _, exists := returnMap[description.GroupId][member.MemberId]; !exists {
+				returnMap[description.GroupId][member.MemberId] = make(map[string]map[int32]bool)
+			}
+			topicToPartitionMap, err := extractPartitionsFromMetadata(member.MemberAssignment)
+			if err != nil {
+				k.logger.Error("failed to decode member assignment", zap.Error(err))
+				continue
+			}
+			if len(topicToPartitionMap) == 0 {
+				k.logger.Warn(
+					"consumer has no assigned partitions",
+					zap.String("consumerGroup", description.GroupId),
+					zap.String("consumer", member.MemberId),
+				)
+				continue
+			}
+			for topic, partitions := range topicToPartitionMap {
+				if topicsToInclude != nil && !topicsToInclude[topic] {
+					continue
+				}
+				for _, partition := range partitions {
+					if _, exists := returnMap[description.GroupId][member.MemberId][topic]; !exists {
+						returnMap[description.GroupId][member.MemberId][topic] = make(map[int32]bool)
+					}
+					returnMap[description.GroupId][member.MemberId][topic][partition] = true
+				}
+			}
+		}
+	}
+	return returnMap, nil
+}
+
+func (k *KafkaService) getTopicPartitionsMap(
+	consumerToTopicToPartitionMap map[string]map[string]map[int32]bool,
+) map[string]map[int32]bool {
+	topicPartitionsMap := make(map[string]map[int32]bool)
+	for _, topicToPartitionMap := range consumerToTopicToPartitionMap {
+		for topic, partitions := range topicToPartitionMap {
+			for partition, _ := range partitions {
+				if _, exists := topicPartitionsMap[topic]; !exists {
+					topicPartitionsMap[topic] = make(map[int32]bool)
+				}
+				topicPartitionsMap[topic][partition] = true
+			}
+		}
+	}
+	return topicPartitionsMap
+}
+
+func (k *KafkaService) getConsumerToTopicToPartitionOffsetsMap(
+	consumerGroupId string,
+	consumerToTopicToPartitionMap map[string]map[string]map[int32]bool,
+	topicPartitionMap map[string]map[int32]bool,
+) (map[string]map[string]map[int32]model.ConsumerDetails, error) {
+	topicToPartitionList := getTopicToPartitionListFromMap(topicPartitionMap)
+	committedOffsets, err := k.admin.ListConsumerGroupOffsets(consumerGroupId, topicToPartitionList)
+	if err != nil {
+		k.logger.Error(
+			"failed to fetch committed offsets",
+			zap.String("consumerGroup", consumerGroupId),
+			zap.Error(err),
+		)
+		return nil, fmt.Errorf("failed to fetch committed offsets: %w", err)
+	}
+
+	consumerToTopicToPartitionOffsetMap := make(map[string]map[string]map[int32]model.ConsumerDetails)
+
+	for topic, partitions := range topicPartitionMap {
+		for partition, _ := range partitions {
+			highWatermark, err := k.client.GetOffset(topic, partition, sarama.OffsetNewest)
+			if err != nil {
+				k.logger.Error(
+					"failed to fetch high watermark",
+					zap.String("topic", topic),
+					zap.Int32("partition", partition),
+					zap.Error(err),
+				)
+				continue
+			}
+
+			committedOffset := committedOffsets.Blocks[topic][partition].Offset
+
+			for consumer, topicToPartitionMap := range consumerToTopicToPartitionMap {
+				if partitionsMap, exists := topicToPartitionMap[topic]; exists {
+					if _, exists := partitionsMap[partition]; exists {
+						if _, exists := consumerToTopicToPartitionOffsetMap[topic]; !exists {
+							consumerToTopicToPartitionOffsetMap[topic] = make(map[string]map[int32]model.ConsumerDetails)
+						}
+						if _, exists := consumerToTopicToPartitionOffsetMap[topic][consumer]; !exists {
+							consumerToTopicToPartitionOffsetMap[topic][consumer] = make(map[int32]model.ConsumerDetails)
+						}
+						if _, exists := consumerToTopicToPartitionOffsetMap[topic][consumer][partition]; !exists {
+							consumerToTopicToPartitionOffsetMap[topic][consumer][partition] = model.ConsumerDetails{}
+						}
+						consumerToTopicToPartitionOffsetMap[topic][consumer][partition] = model.ConsumerDetails{
+							LastCommittedOffset: committedOffset,
+							HighWaterMark:       highWatermark,
+						}
+					}
+				}
+			}
+		}
+	}
+	return consumerToTopicToPartitionOffsetMap, nil
+}
+
+func getTopicToPartitionListFromMap(topicPartitionMap map[string]map[int32]bool) map[string][]int32 {
+	topicToPartitionList := make(map[string][]int32, len(topicPartitionMap))
+	for topic, partitions := range topicPartitionMap {
+		if _, exists := topicToPartitionList[topic]; !exists {
+			topicToPartitionList[topic] = make([]int32, 0, len(partitions))
+		}
+		for partition, _ := range partitions {
+			topicToPartitionList[topic] = append(topicToPartitionList[topic], partition)
+		}
+	}
+	return topicToPartitionList
+}
+
+func extractTopicsFromMetadata(metadataBytes []byte) ([]string, error) {
+	if len(metadataBytes) == 0 {
+		return nil, nil
+	}
+
+	metadata := &sarama.ConsumerGroupMemberMetadata{}
+	buffer := bytes.NewBuffer(metadataBytes)
+	decoder := gob.NewDecoder(buffer)
+
+	err := decoder.Decode(metadata)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding consumer group metadata: %v", err)
+	}
+
+	return metadata.Topics, nil
+}
+
+func extractPartitionsFromMetadata(metadataBytes []byte) (map[string][]int32, error) {
+	if len(metadataBytes) == 0 {
+		return nil, nil
+	}
+
+	metadata := &sarama.ConsumerGroupMemberAssignment{}
+	buffer := bytes.NewBuffer(metadataBytes)
+	decoder := gob.NewDecoder(buffer)
+
+	err := decoder.Decode(metadata)
+	if err != nil {
+		return nil, fmt.Errorf("error decoding consumer group member assignment: %v", err)
+	}
+
+	return metadata.Topics, nil
+}

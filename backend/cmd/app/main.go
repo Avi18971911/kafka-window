@@ -24,6 +24,6 @@ func main() {
 		logger.Fatal("failed to create client", zap.Error(err))
 	}
 	admin, err := sarama.NewClusterAdminFromClient(client)
-	kafkaService := service.NewKafkaService(logger, client, admin)
+	kafkaService := kafka.NewKafkaService(logger, client, admin)
 	defer kafkaService.Close()
 }
