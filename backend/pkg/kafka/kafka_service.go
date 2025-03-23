@@ -32,10 +32,14 @@ func (k *KafkaService) Start() error {
 }
 
 func (k *KafkaService) GetTopics() ([]string, error) {
-	topics, err := k.client.Topics()
+	topicMap, err := k.admin.ListTopics()
 	if err != nil {
 		k.logger.Error("KafkaService can't get topics: failed to get topics", zap.Error(err))
 		return nil, err
+	}
+	topics := make([]string, 0, len(topicMap))
+	for topic, _ := range topicMap {
+		topics = append(topics, topic)
 	}
 	return topics, nil
 }
