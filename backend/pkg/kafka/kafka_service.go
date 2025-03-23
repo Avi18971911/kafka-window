@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"github.com/Avi18971911/kafka-window/backend/pkg/kafka/model"
 	"github.com/IBM/sarama"
 	"go.uber.org/zap"
-	"kafka-window.com/pkg/kafka/model"
 )
 
 type KafkaService struct {

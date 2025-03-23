@@ -1,9 +1,9 @@
 package main
 
 import (
+	"github.com/Avi18971911/kafka-window/backend/pkg/kafka"
 	"github.com/IBM/sarama"
 	"go.uber.org/zap"
-	"kafka-window.com/pkg/service"
 	"log"
 )
 
@@ -18,7 +18,7 @@ func main() {
 
 	config := sarama.NewConfig()
 	config.ClientID = "kafka-ui"
-	config.Version = sarama.V2_5_0_0
+	config.Version = sarama.V3_6_0_0
 	client, err := sarama.NewClient(brokers, config)
 	if err != nil {
 		logger.Fatal("failed to create client", zap.Error(err))
