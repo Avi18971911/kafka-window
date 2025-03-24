@@ -15,18 +15,29 @@ type KafkaService struct {
 
 func NewKafkaService(
 	logger *zap.Logger,
-	client sarama.Client,
-	admin sarama.ClusterAdmin,
 ) *KafkaService {
 	return &KafkaService{
 		logger: logger,
-		client: client,
-		admin:  admin,
 	}
 }
 
 func (k *KafkaService) Start() error {
 	return nil
+}
+
+func (k *KafkaService) ConnectToCluster(brokers []string, config *sarama.Config) {
+	if config == nil {
+		config = sarama.NewConfig()
+		config.ClientID = "kafka-ui"
+		config.Version = sarama.V3_6_0_0
+	}
+	client, err := sarama.NewClient(brokers, config)
+	if err != nil {
+		k.logger.Fatal("failed to create client", zap.Error(err))
+	}
+	admin, err := sarama.NewClusterAdminFromClient(client)
+	k.client = client
+	k.admin = admin
 }
 
 func (k *KafkaService) GetTopics() ([]string, error) {
