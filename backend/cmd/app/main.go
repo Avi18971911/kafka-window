@@ -19,6 +19,7 @@ func main() {
 	config := sarama.NewConfig()
 	config.ClientID = "kafka-ui"
 	config.Version = sarama.V3_6_0_0
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	client, err := sarama.NewClient(brokers, config)
 	if err != nil {
 		logger.Fatal("failed to create client", zap.Error(err))

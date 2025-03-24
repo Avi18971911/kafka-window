@@ -3,9 +3,11 @@ package integration
 import (
 	"context"
 	"github.com/Avi18971911/kafka-window/backend/pkg/kafka"
+	"github.com/Avi18971911/kafka-window/backend/pkg/kafka/model"
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
+	"log"
 	"testing"
 	"time"
 )
@@ -18,22 +20,10 @@ func TestKafkaService(t *testing.T) {
 	kafkaService := kafka.NewKafkaService(logger, client, admin)
 
 	t.Run("Should be able to retrieve all topics", func(t *testing.T) {
-		if admin == nil {
-			t.Fatal("admin is nil")
-		}
-		if client == nil {
-			t.Fatal("client is nil")
-		}
+		assertPrerequisites(t)
 		topicList := []string{"topic1", "topic2", "topic3"}
-		for _, topic := range topicList {
-			err := admin.CreateTopic(topic, &sarama.TopicDetail{
-				NumPartitions:     1,
-				ReplicationFactor: 1,
-			}, false)
-			if err != nil {
-				t.Fatalf("Failed to create topic: %s", err)
-			}
-		}
+		err := createTopics(topicList)
+		assert.NoError(t, err)
 		timeout := 10 * time.Second
 		ticker := time.NewTicker(500 * time.Millisecond)
 		defer ticker.Stop()
@@ -61,44 +51,13 @@ func TestKafkaService(t *testing.T) {
 	})
 
 	t.Run("Should be able to retrieve all consumer groups", func(t *testing.T) {
-		if admin == nil {
-			t.Fatal("admin is nil")
-		}
-		if client == nil {
-			t.Fatal("client is nil")
-		}
+		assertPrerequisites(t)
 		consumerList := []string{"consumer1", "consumer2", "consumer3"}
 		topic := "test-topic"
-		err := admin.CreateTopic(topic, &sarama.TopicDetail{
-			NumPartitions:     1,
-			ReplicationFactor: 1,
-		}, false)
+		err := createTopics([]string{topic})
 		assert.NoError(t, err)
 		consumerCtx, cancel := context.WithCancel(context.Background())
-		cgList := []sarama.ConsumerGroup{}
-
-		for _, consumer := range consumerList {
-			cg, err := sarama.NewConsumerGroupFromClient(consumer, client)
-			if err != nil {
-				t.Fatalf("Failed to create consumer group: %s", err)
-			}
-			cgList = append(cgList, cg)
-			go func(cg sarama.ConsumerGroup) {
-				defer cg.Close()
-				for {
-					err := cg.Consume(consumerCtx, []string{topic}, &noopConsumer{})
-					if err != nil {
-						return
-					}
-					if consumerCtx.Err() != nil {
-						return
-					}
-					if consumerCtx.Done() != nil {
-						return
-					}
-				}
-			}(cg)
-		}
+		cgList := createAndListenConsumerGroups(t, consumerCtx, consumerList, topic)
 		timeout := 10 * time.Second
 		ticker := time.NewTicker(500 * time.Millisecond)
 		defer ticker.Stop()
@@ -128,6 +87,116 @@ func TestKafkaService(t *testing.T) {
 			cg.Close()
 		}
 	})
+
+	t.Run("Should be able to retrieve all consumer groups listening to a topic", func(t *testing.T) {
+		assertPrerequisites(t)
+		consumerList := []string{"consumerGroup1", "consumerGroup2", "consumerGroup3"}
+		topic := "test-topic2"
+		err := createTopics([]string{topic})
+		assert.NoError(t, err)
+		consumerCtx, cancel := context.WithCancel(context.Background())
+		_ = createAndListenConsumerGroups(t, consumerCtx, consumerList, topic)
+
+		timeout := 20 * time.Second
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+
+		timeoutTimer := time.NewTimer(timeout)
+		defer timeoutTimer.Stop()
+
+		details := []model.ConsumerGroupDetails{}
+
+	WaitLoop:
+		for {
+			select {
+			case <-ticker.C:
+				details, err = kafkaService.GetConsumerGroupsDetailsListeningToTopic(topic)
+
+				if len(details) == len(consumerList) &&
+					len(details[0].ConsumerDetails) > 0 &&
+					len(details[1].ConsumerDetails) > 0 &&
+					len(details[2].ConsumerDetails) > 0 {
+					break WaitLoop
+				}
+			case <-timeoutTimer.C:
+				t.Fatalf("Timed out waiting for topics to appear")
+			}
+		}
+		cancel()
+
+		actualConsumerGroups := make([]string, len(details))
+		offsets := make([][]int64, len(details))
+		highWaterMarks := make([][]int64, len(details))
+
+		for i, detail := range details {
+			actualConsumerGroups[i] = detail.GroupId
+			offsets[i] = make([]int64, len(detail.ConsumerDetails))
+			highWaterMarks[i] = make([]int64, len(detail.ConsumerDetails))
+			for j, consumer := range detail.ConsumerDetails {
+				offsets[i][j] = consumer.LastCommittedOffset
+				highWaterMarks[i][j] = consumer.HighWaterMark
+			}
+		}
+
+		assert.ElementsMatch(t, consumerList, actualConsumerGroups)
+		assert.ElementsMatch(t, offsets, [][]int64{{-1}, {-1}, {-1}})
+		assert.ElementsMatch(t, highWaterMarks, [][]int64{{0}, {0}, {0}})
+	})
+}
+
+func assertPrerequisites(t *testing.T) {
+	if admin == nil {
+		t.Fatal("admin is nil")
+	}
+	if client == nil {
+		t.Fatal("client is nil")
+	}
+}
+
+func createAndListenConsumerGroups(
+	t *testing.T,
+	consumerCtx context.Context,
+	consumerList []string,
+	topic string,
+) []sarama.ConsumerGroup {
+	cgList := []sarama.ConsumerGroup{}
+
+	for _, consumer := range consumerList {
+		cg, err := sarama.NewConsumerGroupFromClient(consumer, client)
+		if err != nil {
+			t.Fatalf("Failed to create consumer group: %s", err)
+		}
+		cgList = append(cgList, cg)
+		go func(cg sarama.ConsumerGroup) {
+			defer cg.Close()
+			for {
+				err := cg.Consume(consumerCtx, []string{topic}, &noopConsumer{})
+				if err != nil {
+					return
+				}
+				if consumerCtx.Err() != nil {
+					return
+				}
+				if consumerCtx.Done() != nil {
+					return
+				}
+			}
+		}(cg)
+	}
+	return cgList
+}
+
+func createTopics(topics []string) error {
+	for _, topic := range topics {
+		err := admin.CreateTopic(topic, &sarama.TopicDetail{
+			NumPartitions:     1,
+			ReplicationFactor: 1,
+		}, false)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type noopConsumer struct{}
@@ -136,6 +205,7 @@ func (n *noopConsumer) Setup(sarama.ConsumerGroupSession) error   { return nil }
 func (n *noopConsumer) Cleanup(sarama.ConsumerGroupSession) error { return nil }
 func (n *noopConsumer) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
+		log.Printf("Received message: %s", msg.Value)
 		sess.MarkMessage(msg, "")
 		return nil
 	}

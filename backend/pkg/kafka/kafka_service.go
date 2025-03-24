@@ -1,8 +1,6 @@
 package kafka
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"github.com/Avi18971911/kafka-window/backend/pkg/kafka/model"
 	"github.com/IBM/sarama"
@@ -148,11 +146,20 @@ func (k *KafkaService) getConsumerGroupToConsumersToTopicsToPartitionsMap(
 			if _, exists := returnMap[description.GroupId][member.MemberId]; !exists {
 				returnMap[description.GroupId][member.MemberId] = make(map[string]map[int32]bool)
 			}
-			topicToPartitionMap, err := extractPartitionsFromMetadata(member.MemberAssignment)
+			assignment, err := member.GetMemberAssignment()
 			if err != nil {
-				k.logger.Error("failed to decode member assignment", zap.Error(err))
+				k.logger.Error("failed to get member metadata", zap.Error(err))
 				continue
 			}
+			if assignment == nil {
+				k.logger.Warn(
+					"consumer has no member assignment",
+					zap.String("consumerGroup", description.GroupId),
+					zap.String("consumer", member.MemberId),
+				)
+				continue
+			}
+			topicToPartitionMap := assignment.Topics
 			if len(topicToPartitionMap) == 0 {
 				k.logger.Warn(
 					"consumer has no assigned partitions",
@@ -262,38 +269,4 @@ func getTopicToPartitionListFromMap(topicPartitionMap map[string]map[int32]bool)
 		}
 	}
 	return topicToPartitionList
-}
-
-func extractTopicsFromMetadata(metadataBytes []byte) ([]string, error) {
-	if len(metadataBytes) == 0 {
-		return nil, nil
-	}
-
-	metadata := &sarama.ConsumerGroupMemberMetadata{}
-	buffer := bytes.NewBuffer(metadataBytes)
-	decoder := gob.NewDecoder(buffer)
-
-	err := decoder.Decode(metadata)
-	if err != nil {
-		return nil, fmt.Errorf("error decoding consumer group metadata: %v", err)
-	}
-
-	return metadata.Topics, nil
-}
-
-func extractPartitionsFromMetadata(metadataBytes []byte) (map[string][]int32, error) {
-	if len(metadataBytes) == 0 {
-		return nil, nil
-	}
-
-	metadata := &sarama.ConsumerGroupMemberAssignment{}
-	buffer := bytes.NewBuffer(metadataBytes)
-	decoder := gob.NewDecoder(buffer)
-
-	err := decoder.Decode(metadata)
-	if err != nil {
-		return nil, fmt.Errorf("error decoding consumer group member assignment: %v", err)
-	}
-
-	return metadata.Topics, nil
 }
