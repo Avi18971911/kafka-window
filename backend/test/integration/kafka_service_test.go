@@ -17,12 +17,17 @@ func TestKafkaService(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create logger: %s", err)
 	}
-	kafkaService := kafka.NewKafkaService(logger, client, admin)
+	kafkaService := kafka.NewKafkaService(logger)
 
 	t.Run("Should be able to retrieve all topics", func(t *testing.T) {
 		assertPrerequisites(t)
+		config := sarama.NewConfig()
+		config.Version = sarama.V3_6_0_0
+		_, admin := getClientAndAdmin(t, bootstrapAddress, config)
+		initializeKafkaService(t, kafkaService, bootstrapAddress, config)
+
 		topicList := []string{"topic1", "topic2", "topic3"}
-		err := createTopics(topicList)
+		err := createTopics(admin, topicList)
 		assert.NoError(t, err)
 		timeout := 10 * time.Second
 		ticker := time.NewTicker(500 * time.Millisecond)
@@ -48,16 +53,22 @@ func TestKafkaService(t *testing.T) {
 			}
 		}
 		assert.ElementsMatch(t, topicList, topics)
+		teardown(t, kafkaService, admin, topicList)
 	})
 
 	t.Run("Should be able to retrieve all consumer groups", func(t *testing.T) {
 		assertPrerequisites(t)
+		config := sarama.NewConfig()
+		config.Version = sarama.V3_6_0_0
+		config.Producer.Return.Successes = true
+		client, admin := getClientAndAdmin(t, bootstrapAddress, config)
+		initializeKafkaService(t, kafkaService, bootstrapAddress, config)
 		consumerList := []string{"consumer1", "consumer2", "consumer3"}
 		topic := "test-topic"
-		err := createTopics([]string{topic})
+		err := createTopics(admin, []string{topic})
 		assert.NoError(t, err)
 		consumerCtx, cancel := context.WithCancel(context.Background())
-		cgList := createAndListenConsumerGroups(t, consumerCtx, consumerList, topic)
+		cgList := createAndListenConsumerGroups(t, client, consumerCtx, consumerList, topic)
 		timeout := 10 * time.Second
 		ticker := time.NewTicker(500 * time.Millisecond)
 		defer ticker.Stop()
@@ -86,16 +97,22 @@ func TestKafkaService(t *testing.T) {
 		for _, cg := range cgList {
 			cg.Close()
 		}
+		teardown(t, kafkaService, admin, []string{topic})
 	})
 
 	t.Run("Should be able to retrieve all consumer groups listening to a topic", func(t *testing.T) {
 		assertPrerequisites(t)
+		config := sarama.NewConfig()
+		config.Version = sarama.V3_6_0_0
+		config.Producer.Return.Successes = true
+		client, admin := getClientAndAdmin(t, bootstrapAddress, config)
+		initializeKafkaService(t, kafkaService, bootstrapAddress, config)
 		consumerList := []string{"consumerGroup1", "consumerGroup2", "consumerGroup3"}
 		topic := "test-topic2"
-		err := createTopics([]string{topic})
+		err := createTopics(admin, []string{topic})
 		assert.NoError(t, err)
 		consumerCtx, cancel := context.WithCancel(context.Background())
-		_ = createAndListenConsumerGroups(t, consumerCtx, consumerList, topic)
+		_ = createAndListenConsumerGroups(t, client, consumerCtx, consumerList, topic)
 
 		timeout := 20 * time.Second
 		ticker := time.NewTicker(500 * time.Millisecond)
@@ -141,20 +158,47 @@ func TestKafkaService(t *testing.T) {
 		assert.ElementsMatch(t, consumerList, actualConsumerGroups)
 		assert.ElementsMatch(t, offsets, [][]int64{{-1}, {-1}, {-1}})
 		assert.ElementsMatch(t, highWaterMarks, [][]int64{{0}, {0}, {0}})
+		teardown(t, kafkaService, admin, []string{topic})
 	})
 }
 
 func assertPrerequisites(t *testing.T) {
-	if admin == nil {
-		t.Fatal("admin is nil")
+	if bootstrapAddress == "" {
+		t.Fatal("bootstrapAddress is nil")
 	}
-	if client == nil {
-		t.Fatal("client is nil")
+}
+
+func getClientAndAdmin(
+	t *testing.T,
+	bootstrapAddress string,
+	config *sarama.Config,
+) (sarama.Client, sarama.ClusterAdmin) {
+	client, err := sarama.NewClient([]string{bootstrapAddress}, config)
+	if err != nil {
+		t.Fatalf("Failed to create client: %s", err)
+	}
+	admin, err := sarama.NewClusterAdminFromClient(client)
+	if err != nil {
+		t.Fatalf("Failed to create cluster admin: %s", err)
+	}
+	return client, admin
+}
+
+func initializeKafkaService(
+	t *testing.T,
+	kafkaService *kafka.KafkaService,
+	bootstrapAddress string,
+	config *sarama.Config,
+) {
+	err := kafkaService.ConnectToCluster([]string{bootstrapAddress}, config)
+	if err != nil {
+		t.Fatalf("Failed to connect to cluster: %s", err)
 	}
 }
 
 func createAndListenConsumerGroups(
 	t *testing.T,
+	client sarama.Client,
 	consumerCtx context.Context,
 	consumerList []string,
 	topic string,
@@ -186,7 +230,7 @@ func createAndListenConsumerGroups(
 	return cgList
 }
 
-func createTopics(topics []string) error {
+func createTopics(admin sarama.ClusterAdmin, topics []string) error {
 	for _, topic := range topics {
 		err := admin.CreateTopic(topic, &sarama.TopicDetail{
 			NumPartitions:     1,
@@ -197,6 +241,23 @@ func createTopics(topics []string) error {
 		}
 	}
 	return nil
+}
+
+func teardown(t *testing.T, kafkaService *kafka.KafkaService, admin sarama.ClusterAdmin, topics []string) {
+	for _, topic := range topics {
+		err := admin.DeleteTopic(topic)
+		if err != nil {
+			t.Fatalf("Failed to delete topic: %s", err)
+		}
+	}
+	err := admin.Close()
+	if err != nil {
+		t.Fatalf("Failed to close admin: %s", err)
+	}
+	err = kafkaService.Close()
+	if err != nil {
+		t.Fatalf("Failed to close kafka service: %s", err)
+	}
 }
 
 type noopConsumer struct{}

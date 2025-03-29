@@ -16,15 +16,17 @@ func TestKafkaContainer(t *testing.T) {
 
 		config := sarama.NewConfig()
 		config.Version = sarama.V3_6_0_0
-		_, admin, cleanup := CreateKafkaRuntime(ctx, config)
+		_, admin, cleanup := startContainerAndGetClientAndAdmin(t, ctx, config)
 		defer cleanup()
 
-		topic := "test-topic"
+		topic := "test-topic_containers"
 		err := admin.CreateTopic(topic, &sarama.TopicDetail{
 			NumPartitions:     1,
 			ReplicationFactor: 1,
 		}, false)
 		assert.NoError(t, err)
+
+		teardown(t, admin, topic)
 	})
 
 	t.Run("Should be able to use producers and consumers with Kafka container", func(t *testing.T) {
@@ -35,10 +37,10 @@ func TestKafkaContainer(t *testing.T) {
 		config.Version = sarama.V3_6_0_0
 		config.Producer.Return.Successes = true
 		config.Consumer.Offsets.Initial = sarama.OffsetOldest
-		client, admin, cleanup := CreateKafkaRuntime(ctx, config)
+		client, admin, cleanup := startContainerAndGetClientAndAdmin(t, ctx, config)
 		defer cleanup()
 
-		topic := "test-topic"
+		topic := "test-topic_containers_prod_con"
 		err := admin.CreateTopic(topic, &sarama.TopicDetail{
 			NumPartitions:     1,
 			ReplicationFactor: 1,
@@ -87,7 +89,37 @@ func TestKafkaContainer(t *testing.T) {
 			t.Error("Timed out waiting for message")
 			consumerCancel()
 		}
+
+		teardown(t, admin, topic)
 	})
+}
+
+func startContainerAndGetClientAndAdmin(
+	t *testing.T,
+	ctx context.Context,
+	config *sarama.Config,
+) (sarama.Client, sarama.ClusterAdmin, func()) {
+	bootstrapAddress, stopContainer := CreateKafkaRuntime(ctx)
+	client, err := sarama.NewClient([]string{bootstrapAddress}, config)
+	if err != nil {
+		t.Fatalf("failed to create client: %v", err)
+	}
+	admin, err := sarama.NewClusterAdminFromClient(client)
+	if err != nil {
+		t.Fatalf("failed to create cluster admin: %v", err)
+	}
+	return client, admin, stopContainer
+}
+
+func teardown(t *testing.T, admin sarama.ClusterAdmin, topic string) {
+	err := admin.DeleteTopic(topic)
+	if err != nil {
+		t.Fatalf("Failed to delete topic: %v", err)
+	}
+	err = admin.Close()
+	if err != nil {
+		t.Fatalf("Failed to close admin: %v", err)
+	}
 }
 
 type TestConsumer struct {

@@ -3,7 +3,6 @@ package containers
 import (
 	"context"
 	"fmt"
-	"github.com/IBM/sarama"
 	"github.com/testcontainers/testcontainers-go/modules/kafka"
 	"log"
 	"time"
@@ -47,8 +46,7 @@ func startKafkaContainer(ctx context.Context) (bootstrapAddress string, stopCont
 
 func CreateKafkaRuntime(
 	ctx context.Context,
-	config *sarama.Config,
-) (client sarama.Client, admin sarama.ClusterAdmin, cleanup func()) {
+) (bootstrapAddress string, stopContainer func()) {
 	bootstrapAddress, stopContainer, err := startKafkaContainer(ctx)
 	if err != nil {
 		if stopContainer != nil {
@@ -57,24 +55,5 @@ func CreateKafkaRuntime(
 		log.Fatalf("Failed to start Kafka container: %v", err)
 	}
 
-	client, err = sarama.NewClient([]string{bootstrapAddress}, config)
-	if err != nil {
-		stopContainer()
-		log.Fatalf("Failed to create client: %v", err)
-	}
-
-	admin, err = sarama.NewClusterAdminFromClient(client)
-	if err != nil {
-		stopContainer()
-		log.Fatalf("Failed to create admin: %v", err)
-	}
-
-	cleanup = func() {
-		if err := admin.Close(); err != nil {
-			log.Fatalf("Failed to close admin: %v", err)
-		}
-		stopContainer()
-	}
-
-	return client, admin, cleanup
+	return bootstrapAddress, stopContainer
 }

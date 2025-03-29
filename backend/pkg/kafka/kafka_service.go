@@ -21,11 +21,7 @@ func NewKafkaService(
 	}
 }
 
-func (k *KafkaService) Start() error {
-	return nil
-}
-
-func (k *KafkaService) ConnectToCluster(brokers []string, config *sarama.Config) {
+func (k *KafkaService) ConnectToCluster(brokers []string, config *sarama.Config) error {
 	if config == nil {
 		config = sarama.NewConfig()
 		config.ClientID = "kafka-ui"
@@ -33,11 +29,15 @@ func (k *KafkaService) ConnectToCluster(brokers []string, config *sarama.Config)
 	}
 	client, err := sarama.NewClient(brokers, config)
 	if err != nil {
-		k.logger.Fatal("failed to create client", zap.Error(err))
+		return fmt.Errorf("failed to create client: %w", err)
 	}
 	admin, err := sarama.NewClusterAdminFromClient(client)
+	if err != nil {
+		return fmt.Errorf("failed to create cluster admin: %w", err)
+	}
 	k.client = client
 	k.admin = admin
+	return nil
 }
 
 func (k *KafkaService) GetTopics() ([]string, error) {

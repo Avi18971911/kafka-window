@@ -11,8 +11,7 @@ import (
 
 const timeoutMinutes = time.Minute * 5
 
-var client sarama.Client
-var admin sarama.ClusterAdmin
+var bootstrapAddress string
 
 func TestMain(m *testing.M) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutMinutes)
@@ -22,7 +21,7 @@ func TestMain(m *testing.M) {
 	config.Version = sarama.V3_6_0_0
 	config.Producer.Return.Successes = true
 	var cleanup func()
-	client, admin, cleanup = containers.CreateKafkaRuntime(ctx, config)
+	bootstrapAddress, cleanup = containers.CreateKafkaRuntime(ctx)
 	code := m.Run()
 	cleanup()
 	os.Exit(code)
