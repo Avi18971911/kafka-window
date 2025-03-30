@@ -1,0 +1,39 @@
+definitions:
+  handler.ErrorMessage:
+    properties:
+      message:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: This is a monitoring and analytics tool for Kafka.
+  title: Kafka Window API
+  version: "1.0"
+paths:
+  /topics:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: No parameters required
+        in: body
+        name: '-'
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of topic names
+          schema:
+            items:
+              type: string
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorMessage'
+      summary: Get a list of all topics.
+      tags:
+      - topics
+swagger: "2.0"
