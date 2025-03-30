@@ -10,7 +10,7 @@ import (
 
 // AllTopicsHandler creates a handler for getting all topics from a list of brokers.
 // @Summary Get a list of all topics.
-// @Tags analytics
+// @Tags topics
 // @Accept json
 // @Produce json
 // @Param - body string false "No parameters required"
