@@ -2,7 +2,7 @@ package kafka
 
 import (
 	"fmt"
-	"github.com/Avi18971911/kafka-window/backend/pkg/kafka/model"
+	"github.com/Avi18971911/kafka-window/backend/internal/kafka/model"
 	"github.com/IBM/sarama"
 	"go.uber.org/zap"
 )
