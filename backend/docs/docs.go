@@ -41,10 +41,7 @@ const docTemplate = `{
                     "200": {
                         "description": "List of topic names",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.TopicDetails"
                         }
                     },
                     "500": {
@@ -63,6 +60,64 @@ const docTemplate = `{
             "properties": {
                 "message": {
                     "type": "string"
+                }
+            }
+        },
+        "model.CleanupPolicy": {
+            "type": "string",
+            "enum": [
+                "delete",
+                "compact",
+                "both",
+                "unknown"
+            ],
+            "x-enum-varnames": [
+                "CleanupPolicyDelete",
+                "CleanupPolicyCompact",
+                "CleanupPolicyBoth",
+                "CleanupPolicyUnknown"
+            ]
+        },
+        "model.RetentionMs": {
+            "type": "object",
+            "properties": {
+                "indefinite": {
+                    "type": "boolean"
+                },
+                "value": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.TopicDetails": {
+            "type": "object",
+            "properties": {
+                "additionalConfigs": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "cleanupPolicy": {
+                    "$ref": "#/definitions/model.CleanupPolicy"
+                },
+                "isInternal": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "numPartitions": {
+                    "type": "integer"
+                },
+                "replicationFactor": {
+                    "type": "integer"
+                },
+                "retentionBytes": {
+                    "type": "integer"
+                },
+                "retentionMs": {
+                    "$ref": "#/definitions/model.RetentionMs"
                 }
             }
         }

@@ -4,6 +4,46 @@ definitions:
       message:
         type: string
     type: object
+  model.CleanupPolicy:
+    enum:
+    - delete
+    - compact
+    - both
+    - unknown
+    type: string
+    x-enum-varnames:
+    - CleanupPolicyDelete
+    - CleanupPolicyCompact
+    - CleanupPolicyBoth
+    - CleanupPolicyUnknown
+  model.RetentionMs:
+    properties:
+      indefinite:
+        type: boolean
+      value:
+        type: integer
+    type: object
+  model.TopicDetails:
+    properties:
+      additionalConfigs:
+        additionalProperties:
+          type: string
+        type: object
+      cleanupPolicy:
+        $ref: '#/definitions/model.CleanupPolicy'
+      isInternal:
+        type: boolean
+      name:
+        type: string
+      numPartitions:
+        type: integer
+      replicationFactor:
+        type: integer
+      retentionBytes:
+        type: integer
+      retentionMs:
+        $ref: '#/definitions/model.RetentionMs'
+    type: object
 info:
   contact: {}
   description: This is a monitoring and analytics tool for Kafka.
@@ -26,9 +66,7 @@ paths:
         "200":
           description: List of topic names
           schema:
-            items:
-              type: string
-            type: array
+            $ref: '#/definitions/model.TopicDetails'
         "500":
           description: Internal server error
           schema:

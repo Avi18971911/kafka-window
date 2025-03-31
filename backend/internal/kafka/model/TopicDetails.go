@@ -1,8 +1,8 @@
 package model
 
 type TopicDetails struct {
-	Name              string            `json:"name"`
-	NumPartitions     int32             `json:"numPartitions"`
+	Name              string            `json:"name" validate:"required"`
+	NumPartitions     int32             `json:"numPartitions" validate:"required"`
 	ReplicationFactor int16             `json:"replicationFactor"`
 	IsInternal        bool              `json:"isInternal"`
 	CleanupPolicy     CleanupPolicy     `json:"cleanupPolicy"`
