@@ -22,6 +22,9 @@ definitions:
         type: boolean
       value:
         type: integer
+    required:
+    - indefinite
+    - value
     type: object
   model.TopicDetails:
     properties:
@@ -43,6 +46,15 @@ definitions:
         type: integer
       retentionMs:
         $ref: '#/definitions/model.RetentionMs'
+    required:
+    - additionalConfigs
+    - cleanupPolicy
+    - isInternal
+    - name
+    - numPartitions
+    - replicationFactor
+    - retentionBytes
+    - retentionMs
     type: object
 info:
   contact: {}
@@ -66,7 +78,9 @@ paths:
         "200":
           description: List of topic names
           schema:
-            $ref: '#/definitions/model.TopicDetails'
+            items:
+              $ref: '#/definitions/model.TopicDetails'
+            type: array
         "500":
           description: Internal server error
           schema:

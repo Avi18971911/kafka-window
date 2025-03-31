@@ -41,7 +41,10 @@ const docTemplate = `{
                     "200": {
                         "description": "List of topic names",
                         "schema": {
-                            "$ref": "#/definitions/model.TopicDetails"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.TopicDetails"
+                            }
                         }
                     },
                     "500": {
@@ -80,6 +83,10 @@ const docTemplate = `{
         },
         "model.RetentionMs": {
             "type": "object",
+            "required": [
+                "indefinite",
+                "value"
+            ],
             "properties": {
                 "indefinite": {
                     "type": "boolean"
@@ -91,6 +98,16 @@ const docTemplate = `{
         },
         "model.TopicDetails": {
             "type": "object",
+            "required": [
+                "additionalConfigs",
+                "cleanupPolicy",
+                "isInternal",
+                "name",
+                "numPartitions",
+                "replicationFactor",
+                "retentionBytes",
+                "retentionMs"
+            ],
             "properties": {
                 "additionalConfigs": {
                     "type": "object",

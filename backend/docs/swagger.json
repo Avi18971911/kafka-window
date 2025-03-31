@@ -33,7 +33,10 @@
                     "200": {
                         "description": "List of topic names",
                         "schema": {
-                            "$ref": "#/definitions/model.TopicDetails"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.TopicDetails"
+                            }
                         }
                     },
                     "500": {
@@ -72,6 +75,10 @@
         },
         "model.RetentionMs": {
             "type": "object",
+            "required": [
+                "indefinite",
+                "value"
+            ],
             "properties": {
                 "indefinite": {
                     "type": "boolean"
@@ -83,6 +90,16 @@
         },
         "model.TopicDetails": {
             "type": "object",
+            "required": [
+                "additionalConfigs",
+                "cleanupPolicy",
+                "isInternal",
+                "name",
+                "numPartitions",
+                "replicationFactor",
+                "retentionBytes",
+                "retentionMs"
+            ],
             "properties": {
                 "additionalConfigs": {
                     "type": "object",

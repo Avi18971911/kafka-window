@@ -14,7 +14,7 @@ import (
 // @Accept json
 // @Produce json
 // @Param - body string false "No parameters required"
-// @Success 200 {object} model.TopicDetails "List of topic names"
+// @Success 200 {array} model.TopicDetails "List of topic names"
 // @Failure 500 {object} ErrorMessage "Internal server error"
 // @Router /topics [get]
 func AllTopicsHandler(

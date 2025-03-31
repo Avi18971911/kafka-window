@@ -1,16 +1,19 @@
 import {useEffect, useState} from "react";
 import {useApiClientContext} from "../provider/ApiClientProvider.tsx";
 import DataTable from "../components/DataTable.tsx";
+import {mapModelTopicDetailsToTopicDetails} from "../service/TopicDetailsService.ts";
+import {TopicDetails} from "../model/TopicDetails.ts";
 
 function TopicsPage() {
-    const [topics, setTopics] = useState<string[]>([])
+    const [topics, setTopics] = useState<TopicDetails[]>([])
     const [error, setError] = useState<string | null>(null)
     const apiClient = useApiClientContext()
 
     useEffect(() => {
         apiClient.topicsGet().then(
             (response) => {
-                setTopics(response)
+                const mappedResponse = mapModelTopicDetailsToTopicDetails(response)
+                setTopics(mappedResponse)
             }
         ).catch(
             (error) => {
