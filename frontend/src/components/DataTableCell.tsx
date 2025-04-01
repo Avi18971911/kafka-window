@@ -9,8 +9,16 @@ type DataTableCellProps = {
 
 const DataTableCell: React.FC<DataTableCellProps> = ({ topicDetails, onToggleExpand, expanded }) => {
     const isInternalTopic = topicDetails.isInternal ? 'Yes' : 'No';
-    const retentionMs = topicDetails.retentionMs.indefinite ? 'indefinite' : topicDetails.retentionMs.value;
-    const retentionBytes = topicDetails.retentionBytes === -1 ? 'unknown' : topicDetails.retentionBytes;
+    const retentionMs =
+        topicDetails.retentionMs ?
+            (topicDetails.retentionMs.value === -1 ? 'Indefinite' : topicDetails.retentionMs.value)
+        :
+            'Not Set';
+    const retentionBytes =
+        topicDetails.retentionBytes ?
+            (topicDetails.retentionBytes === -1 ? 'unknown' : topicDetails.retentionBytes)
+        :
+            'Not Set';
     let cleanupPolicy;
     switch(topicDetails.cleanupPolicy) {
         case 'delete':

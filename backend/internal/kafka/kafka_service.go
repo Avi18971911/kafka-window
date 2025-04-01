@@ -276,8 +276,8 @@ func (k *KafkaService) getTopicDetailsFromTopicMap(
 	for topic, topicDetail := range topicMap {
 		additionalConfigs := make(map[string]string)
 		var cleanupPolicy = model.CleanupPolicyUnknown
-		var retentionMs int64 = -1
-		var retentionBytes int64 = -1
+		var retentionMs *int64 = nil
+		var retentionBytes *int64 = nil
 		for configKey, config := range topicDetail.ConfigEntries {
 			if config == nil {
 				k.logger.Warn(
@@ -306,7 +306,7 @@ func (k *KafkaService) getTopicDetailsFromTopicMap(
 					)
 					continue
 				}
-				retentionMs = rMs
+				retentionMs = &rMs
 			case "retention.bytes":
 				rBs, err := strconv.ParseInt(*config, 10, 64)
 				if err != nil {
@@ -317,22 +317,26 @@ func (k *KafkaService) getTopicDetailsFromTopicMap(
 					)
 					continue
 				}
-				retentionBytes = rBs
+				retentionBytes = &rBs
 			default:
 				additionalConfigs[configKey] = *config
 			}
 		}
 		isInternal := isInternalTopic(topic)
+		var retentionMsModel *model.RetentionMs = nil
+		if retentionMs != nil {
+			retentionMsModel = &model.RetentionMs{
+				Indefinite: *retentionMs == -1,
+				Value:      *retentionMs,
+			}
+		}
 		topicDetails[i] = model.TopicDetails{
 			Name:              topic,
 			NumPartitions:     topicDetail.NumPartitions,
 			ReplicationFactor: topicDetail.ReplicationFactor,
 			IsInternal:        isInternal,
 			CleanupPolicy:     cleanupPolicy,
-			RetentionMs: model.RetentionMs{
-				Indefinite: retentionMs == -1,
-				Value:      retentionMs,
-			},
+			RetentionMs:       retentionMsModel,
 			RetentionBytes:    retentionBytes,
 			AdditionalConfigs: additionalConfigs,
 		}

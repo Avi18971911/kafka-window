@@ -53,8 +53,6 @@ definitions:
     - name
     - numPartitions
     - replicationFactor
-    - retentionBytes
-    - retentionMs
     type: object
 info:
   contact: {}

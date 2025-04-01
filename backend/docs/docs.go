@@ -104,9 +104,7 @@ const docTemplate = `{
                 "isInternal",
                 "name",
                 "numPartitions",
-                "replicationFactor",
-                "retentionBytes",
-                "retentionMs"
+                "replicationFactor"
             ],
             "properties": {
                 "additionalConfigs": {
