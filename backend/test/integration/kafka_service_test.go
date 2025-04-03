@@ -52,7 +52,11 @@ func TestKafkaService(t *testing.T) {
 				t.Fatalf("Timed out waiting for topics to appear")
 			}
 		}
-		assert.ElementsMatch(t, topicList, topics)
+		topicNames := make([]string, len(topics))
+		for i, topic := range topics {
+			topicNames[i] = topic.Name
+		}
+		assert.ElementsMatch(t, topicList, topicNames)
 		teardown(t, kafkaService, admin, topicList)
 	})
 

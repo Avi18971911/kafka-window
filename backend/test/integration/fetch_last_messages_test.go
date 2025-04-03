@@ -51,6 +51,7 @@ func TestFetchLastMessages(t *testing.T) {
 			assert.Equal(t, plaintextMessages[i].Topic, message.Topic)
 			assert.Equal(t, int64(i), message.Offset)
 		}
+		teardown(t, kafkaService, admin, []string{topic})
 	})
 }
 
