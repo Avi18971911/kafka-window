@@ -36,7 +36,7 @@ func TestKafkaService(t *testing.T) {
 		timeoutTimer := time.NewTimer(timeout)
 		defer timeoutTimer.Stop()
 
-		var topics []string
+		var topics []model.TopicDetails
 
 	WaitLoop:
 		for {

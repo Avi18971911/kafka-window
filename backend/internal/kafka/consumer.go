@@ -52,7 +52,7 @@ func (k *KafkaService) FetchLastMessages(
 	defer partitionConsumer.Close()
 
 	i := 0
-	messages := make([]*model.Message, 0, limit)
+	messages := make([]*model.Message, limit)
 	for message := range partitionConsumer.Messages() {
 		timestamp := message.Timestamp
 		decodedPayload, err := DecodeMessage(message.Value, encoding)
