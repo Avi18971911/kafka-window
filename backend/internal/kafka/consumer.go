@@ -73,14 +73,24 @@ func (k *KafkaService) FetchLastMessages(
 			)
 			continue
 		}
+		var decodedKeyJSONPayload *model.JSONValue = nil
+		if decodedKey.Type == model.JSONPayload {
+			decodedKeyJSONPayload = &decodedKey.JSONPayload
+		}
+		var decodedValueJSONPayload *model.JSONValue = nil
+		if decodedPayload.Type == model.JSONPayload {
+			decodedValueJSONPayload = &decodedPayload.JSONPayload
+		}
 		messages[i] = &model.Message{
 			Topic:            topic,
 			Offset:           message.Offset,
 			Partition:        message.Partition,
 			Key:              decodedKey.Payload,
 			KeyPayloadType:   decodedKey.Type,
+			KeyJsonPayload:   decodedKeyJSONPayload,
 			Value:            decodedPayload.Payload,
 			ValuePayloadType: decodedPayload.Type,
+			ValueJsonPayload: decodedValueJSONPayload,
 			Timestamp:        timestamp,
 		}
 		i++

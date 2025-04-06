@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka"
+	"github.com/Avi18971911/kafka-window/backend/internal/kafka/model"
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
@@ -53,6 +54,10 @@ func TestFetchLastMessages(t *testing.T) {
 			assert.Equal(t, plaintextMessages[i].Partition, message.Partition)
 			assert.Equal(t, plaintextMessages[i].Topic, message.Topic)
 			assert.Equal(t, int64(i), message.Offset)
+			assert.Equal(t, model.StringPayload, message.KeyPayloadType)
+			assert.Equal(t, model.StringPayload, message.ValuePayloadType)
+			assert.Nil(t, message.KeyJsonPayload)
+			assert.Nil(t, message.ValueJsonPayload)
 		}
 		teardown(t, kafkaService, admin, []string{topic})
 	})
@@ -95,6 +100,10 @@ func TestFetchLastMessages(t *testing.T) {
 			assert.Equal(t, base64Messages[i].Partition, message.Partition)
 			assert.Equal(t, base64Messages[i].Topic, message.Topic)
 			assert.Equal(t, int64(i), message.Offset)
+			assert.Equal(t, model.StringPayload, message.KeyPayloadType)
+			assert.Equal(t, model.StringPayload, message.ValuePayloadType)
+			assert.Nil(t, message.KeyJsonPayload)
+			assert.Nil(t, message.ValueJsonPayload)
 		}
 		teardown(t, kafkaService, admin, []string{topic})
 	})
@@ -133,6 +142,17 @@ func TestFetchLastMessages(t *testing.T) {
 			assert.Equal(t, jsonMessages[i].Partition, message.Partition)
 			assert.Equal(t, jsonMessages[i].Topic, message.Topic)
 			assert.Equal(t, int64(i), message.Offset)
+
+			assert.Equal(t, model.JSONPayload, message.KeyPayloadType)
+			assert.Equal(t, model.JSONPayload, message.ValuePayloadType)
+
+			assert.NotNil(t, message.KeyJsonPayload)
+			assert.NotNil(t, message.KeyJsonPayload.ObjectVal["key"])
+			assert.NotNil(t, message.ValueJsonPayload)
+			assert.NotNil(t, message.ValueJsonPayload.ObjectVal["value"])
+
+			assert.Contains(t, string(encodedKey), *message.KeyJsonPayload.ObjectVal["key"].StringVal)
+			assert.Contains(t, string(encodedVal), *message.ValueJsonPayload.ObjectVal["value"].StringVal)
 		}
 		teardown(t, kafkaService, admin, []string{topic})
 	})

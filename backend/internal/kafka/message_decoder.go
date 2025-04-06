@@ -15,20 +15,22 @@ const (
 )
 
 type DecodedPayload struct {
-	Payload string
-	Type    model.PayloadType
+	Payload     string
+	JSONPayload model.JSONValue
+	Type        model.PayloadType
 }
 
 func DecodeMessage(value []byte, encoding Encoding) (DecodedPayload, error) {
 	switch encoding {
 	case JSON:
-		decodedResult, err := decodeJSON(value)
+		stringJson, decodedResult, err := decodeJSON(value)
 		if err != nil {
 			return DecodedPayload{}, fmt.Errorf("failed to decode JSON: %w", err)
 		}
 		return DecodedPayload{
-			Payload: decodedResult,
-			Type:    model.JSONPayload,
+			Payload:     stringJson,
+			JSONPayload: decodedResult,
+			Type:        model.JSONPayload,
 		}, nil
 	case PlainText:
 		decodedResult, err := decodePlainText(value)
@@ -53,8 +55,10 @@ func DecodeMessage(value []byte, encoding Encoding) (DecodedPayload, error) {
 	}
 }
 
-func decodeJSON(value []byte) (string, error) {
-	return string(value), nil
+func decodeJSON(value []byte) (string, model.JSONValue, error) {
+	jsonString := string(value)
+	parsedJSON, err := ParseString(jsonString)
+	return jsonString, parsedJSON, err
 }
 
 func decodePlainText(value []byte) (string, error) {

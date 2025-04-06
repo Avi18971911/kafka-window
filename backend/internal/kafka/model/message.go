@@ -10,8 +10,10 @@ type Message struct {
 	Topic            string
 	Timestamp        time.Time
 	Key              string
+	KeyJsonPayload   *JSONValue
 	KeyPayloadType   PayloadType
 	Value            string
+	ValueJsonPayload *JSONValue
 	ValuePayloadType PayloadType
 }
 
