@@ -2,8 +2,8 @@ package kafka
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
+	"github.com/Avi18971911/kafka-window/backend/internal/kafka/model"
 )
 
 type Encoding string
@@ -14,26 +14,47 @@ const (
 	Base64    Encoding = "base64"
 )
 
-func DecodeMessage(value []byte, encoding Encoding) (string, error) {
+type DecodedPayload struct {
+	Payload string
+	Type    model.PayloadType
+}
+
+func DecodeMessage(value []byte, encoding Encoding) (DecodedPayload, error) {
 	switch encoding {
 	case JSON:
-		return decodeJSON(value)
+		decodedResult, err := decodeJSON(value)
+		if err != nil {
+			return DecodedPayload{}, fmt.Errorf("failed to decode JSON: %w", err)
+		}
+		return DecodedPayload{
+			Payload: decodedResult,
+			Type:    model.JSONPayload,
+		}, nil
 	case PlainText:
-		return decodePlainText(value)
+		decodedResult, err := decodePlainText(value)
+		if err != nil {
+			return DecodedPayload{}, fmt.Errorf("failed to decode plain text: %w", err)
+		}
+		return DecodedPayload{
+			Payload: decodedResult,
+			Type:    model.StringPayload,
+		}, nil
 	case Base64:
-		return decodeBase64(value)
+		decodedResult, err := decodeBase64(value)
+		if err != nil {
+			return DecodedPayload{}, fmt.Errorf("failed to decode base64: %w", err)
+		}
+		return DecodedPayload{
+			Payload: decodedResult,
+			Type:    model.StringPayload,
+		}, nil
 	default:
-		return "", fmt.Errorf("unsupported encoding: %s", encoding)
+		return DecodedPayload{}, fmt.Errorf("unsupported encoding: %s", encoding)
 	}
 }
 
 func decodeJSON(value []byte) (string, error) {
-	var message string
-	err := json.Unmarshal(value, &message)
-	if err != nil {
-		return "", fmt.Errorf("failed to decode JSON: %w", err)
-	}
-	return message, nil
+	return string(value), nil
 }
 
 func decodePlainText(value []byte) (string, error) {

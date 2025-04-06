@@ -74,12 +74,14 @@ func (k *KafkaService) FetchLastMessages(
 			continue
 		}
 		messages[i] = &model.Message{
-			Topic:     topic,
-			Offset:    message.Offset,
-			Partition: message.Partition,
-			Key:       decodedKey,
-			Value:     decodedPayload,
-			Timestamp: timestamp,
+			Topic:            topic,
+			Offset:           message.Offset,
+			Partition:        message.Partition,
+			Key:              decodedKey.Payload,
+			KeyPayloadType:   decodedKey.Type,
+			Value:            decodedPayload.Payload,
+			ValuePayloadType: decodedPayload.Type,
+			Timestamp:        timestamp,
 		}
 		i++
 		if i >= limit {
