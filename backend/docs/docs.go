@@ -55,6 +55,80 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/topics/{topic}/messages": {
+            "get": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "topics"
+                ],
+                "summary": "Get messages from a topic.",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Topic name",
+                        "name": "topic",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Key encoding (json, plaintext, base64)",
+                        "name": "keyEncoding",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Message encoding (json, plaintext, base64)",
+                        "name": "messageEncoding",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Page size",
+                        "name": "pageSize",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Page number",
+                        "name": "pageNumber",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of messages",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Message"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorMessage"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorMessage"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -79,6 +153,103 @@ const docTemplate = `{
                 "CleanupPolicyCompact",
                 "CleanupPolicyBoth",
                 "CleanupPolicyUnknown"
+            ]
+        },
+        "model.JSONType": {
+            "type": "string",
+            "enum": [
+                "string",
+                "number",
+                "bool",
+                "object",
+                "array",
+                "null"
+            ],
+            "x-enum-varnames": [
+                "STRING",
+                "NUMBER",
+                "BOOL",
+                "OBJECT",
+                "ARRAY",
+                "NULL"
+            ]
+        },
+        "model.JSONValue": {
+            "type": "object",
+            "properties": {
+                "arrayVal": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.JSONValue"
+                    }
+                },
+                "boolVal": {
+                    "type": "boolean"
+                },
+                "nullVal": {
+                    "type": "boolean"
+                },
+                "numberVal": {
+                    "type": "number"
+                },
+                "objectVal": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/model.JSONValue"
+                    }
+                },
+                "stringVal": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.JSONType"
+                }
+            }
+        },
+        "model.Message": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "keyJsonPayload": {
+                    "$ref": "#/definitions/model.JSONValue"
+                },
+                "keyPayloadType": {
+                    "$ref": "#/definitions/model.PayloadType"
+                },
+                "offset": {
+                    "type": "integer"
+                },
+                "partition": {
+                    "type": "integer"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "topic": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "string"
+                },
+                "valueJsonPayload": {
+                    "$ref": "#/definitions/model.JSONValue"
+                },
+                "valuePayloadType": {
+                    "$ref": "#/definitions/model.PayloadType"
+                }
+            }
+        },
+        "model.PayloadType": {
+            "type": "string",
+            "enum": [
+                "json",
+                "string"
+            ],
+            "x-enum-varnames": [
+                "JSONPayload",
+                "StringPayload"
             ]
         },
         "model.RetentionMs": {

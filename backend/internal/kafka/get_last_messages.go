@@ -42,6 +42,7 @@ func (k *KafkaService) GetLastMessages(
 		return nil, nil
 	}
 	lastMessages := make([]*model.Message, 0)
+	// TODO: figure out a proper pagination strategy
 	for _, partition := range topicDetail.Partitions {
 		partitionMessages, err := k.FetchLastMessages(
 			topic,
@@ -82,7 +83,6 @@ func (k *KafkaService) getEncodingType(rawMessage []byte) (Encoding, error) {
 		return JSON, nil
 	}
 
-	// Check plaintext (printable UTF-8)
 	if utf8.Valid(trimmed) && isMostlyPrintable(trimmed) {
 		return PlainText, nil
 	}

@@ -16,6 +16,74 @@ definitions:
     - CleanupPolicyCompact
     - CleanupPolicyBoth
     - CleanupPolicyUnknown
+  model.JSONType:
+    enum:
+    - string
+    - number
+    - bool
+    - object
+    - array
+    - "null"
+    type: string
+    x-enum-varnames:
+    - STRING
+    - NUMBER
+    - BOOL
+    - OBJECT
+    - ARRAY
+    - "NULL"
+  model.JSONValue:
+    properties:
+      arrayVal:
+        items:
+          $ref: '#/definitions/model.JSONValue'
+        type: array
+      boolVal:
+        type: boolean
+      nullVal:
+        type: boolean
+      numberVal:
+        type: number
+      objectVal:
+        additionalProperties:
+          $ref: '#/definitions/model.JSONValue'
+        type: object
+      stringVal:
+        type: string
+      type:
+        $ref: '#/definitions/model.JSONType'
+    type: object
+  model.Message:
+    properties:
+      key:
+        type: string
+      keyJsonPayload:
+        $ref: '#/definitions/model.JSONValue'
+      keyPayloadType:
+        $ref: '#/definitions/model.PayloadType'
+      offset:
+        type: integer
+      partition:
+        type: integer
+      timestamp:
+        type: string
+      topic:
+        type: string
+      value:
+        type: string
+      valueJsonPayload:
+        $ref: '#/definitions/model.JSONValue'
+      valuePayloadType:
+        $ref: '#/definitions/model.PayloadType'
+    type: object
+  model.PayloadType:
+    enum:
+    - json
+    - string
+    type: string
+    x-enum-varnames:
+    - JSONPayload
+    - StringPayload
   model.RetentionMs:
     properties:
       indefinite:
@@ -84,6 +152,56 @@ paths:
           schema:
             $ref: '#/definitions/handler.ErrorMessage'
       summary: Get a list of all topics.
+      tags:
+      - topics
+  /topics/{topic}/messages:
+    get:
+      consumes:
+      - application/json
+      parameters:
+      - description: Topic name
+        in: path
+        name: topic
+        required: true
+        type: string
+      - description: Key encoding (json, plaintext, base64)
+        in: path
+        name: keyEncoding
+        required: true
+        type: string
+      - description: Message encoding (json, plaintext, base64)
+        in: path
+        name: messageEncoding
+        required: true
+        type: string
+      - description: Page size
+        in: path
+        name: pageSize
+        required: true
+        type: string
+      - description: Page number
+        in: path
+        name: pageNumber
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of messages
+          schema:
+            items:
+              $ref: '#/definitions/model.Message'
+            type: array
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/handler.ErrorMessage'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.ErrorMessage'
+      summary: Get messages from a topic.
       tags:
       - topics
 swagger: "2.0"
