@@ -40,7 +40,14 @@ func TestFetchLastMessages(t *testing.T) {
 		err = produceMessages(client, plaintextMessages)
 		assert.NoError(t, err)
 
-		messages, err := kafkaService.FetchLastMessages(topic, 0, 100, kafka.PlainText)
+		messages, err := kafkaService.FetchLastMessages(
+			topic,
+			0,
+			100,
+			100,
+			kafka.PlainText,
+			kafka.PlainText,
+		)
 		assert.NoError(t, err)
 		assert.Len(t, messages, 100)
 		for i, message := range messages {
@@ -82,7 +89,14 @@ func TestFetchLastMessages(t *testing.T) {
 		err = produceMessages(client, base64Messages)
 		assert.NoError(t, err)
 
-		messages, err := kafkaService.FetchLastMessages(topic, 0, 100, kafka.Base64)
+		messages, err := kafkaService.FetchLastMessages(
+			topic,
+			0,
+			100,
+			100,
+			kafka.Base64,
+			kafka.Base64,
+		)
 		assert.NoError(t, err)
 		assert.Len(t, messages, 100)
 		for i, message := range messages {
@@ -128,7 +142,14 @@ func TestFetchLastMessages(t *testing.T) {
 		err = produceMessages(client, jsonMessages)
 		assert.NoError(t, err)
 
-		messages, err := kafkaService.FetchLastMessages(topic, 0, 100, kafka.JSON)
+		messages, err := kafkaService.FetchLastMessages(
+			topic,
+			0,
+			100,
+			100,
+			kafka.JSON,
+			kafka.JSON,
+		)
 		assert.NoError(t, err)
 		assert.Len(t, messages, 100)
 		for i, message := range messages {

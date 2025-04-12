@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka"
+	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -34,5 +35,20 @@ func AllTopicsHandler(
 			logger.Error("Error encountered when encoding response", zap.Error(err))
 			HttpError(w, "Couldn't encode response.", http.StatusInternalServerError, logger)
 		}
+	}
+}
+
+func TopicMessages(
+	ctx context.Context,
+	kafkaService *kafka.KafkaService,
+	logger *zap.Logger,
+) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		topic := mux.Vars(r)["topic"]
+		keyEncoding := mux.Vars(r)["keyEncoding"]
+		messageEncoding := mux.Vars(r)["messageEncoding"]
+		pageSize := mux.Vars(r)["pageSize"]
+		pageNumber := mux.Vars(r)["pageNumber"]
+
 	}
 }
