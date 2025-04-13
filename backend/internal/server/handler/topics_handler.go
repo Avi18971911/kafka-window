@@ -60,10 +60,10 @@ func TopicMessagesHandler(
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		topic := mux.Vars(r)["topic"]
-		keyEncoding := mux.Vars(r)["keyEncoding"]
-		messageEncoding := mux.Vars(r)["messageEncoding"]
-		pageSize := mux.Vars(r)["pageSize"]
-		pageNumber := mux.Vars(r)["pageNumber"]
+		pageSize := r.URL.Query().Get("pageSize")
+		pageNumber := r.URL.Query().Get("pageNumber")
+		keyEncoding := r.URL.Query().Get("keyEncoding")
+		messageEncoding := r.URL.Query().Get("messageEncoding")
 
 		mappedKeyEncoding, err := mapEncodingStringToEnum(keyEncoding)
 		if err != nil {

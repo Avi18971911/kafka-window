@@ -24,5 +24,13 @@ func CreateRouter(
 		),
 	).Methods("GET")
 
+	r.Handle(
+		"/topics/{topic}/messages", handler.TopicMessagesHandler(
+			ctx,
+			kafkaService,
+			logger,
+		),
+	).Methods("GET")
+
 	return r
 }

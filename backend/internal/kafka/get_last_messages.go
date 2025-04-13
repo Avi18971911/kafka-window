@@ -61,7 +61,9 @@ func (k *KafkaService) GetLastMessages(
 			)
 			return nil, err
 		}
-		lastMessages = append(lastMessages, partitionMessages...)
+		if partitionMessages != nil && len(partitionMessages) > 0 {
+			lastMessages = append(lastMessages, partitionMessages...)
+		}
 	}
 	return lastMessages, nil
 }

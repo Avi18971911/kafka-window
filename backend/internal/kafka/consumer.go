@@ -23,7 +23,6 @@ func (k *KafkaService) GetLastMessage(
 	}
 	startOffset := newestOffset - 1
 	if startOffset < 0 {
-		// TODO: Output an enum member indicating that there are no messages
 		return nil, nil
 	}
 	consumer, err := sarama.NewConsumerFromClient(k.client)
@@ -78,6 +77,9 @@ func (k *KafkaService) FetchLastMessages(
 	}
 
 	startOffset := newestOffset - int64(distanceFromLatestOffset)
+	if newestOffset == 0 {
+		return nil, nil
+	}
 	if startOffset < 0 {
 		startOffset = 0
 	}

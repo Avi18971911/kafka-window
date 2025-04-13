@@ -9,7 +9,7 @@ func mapEncodingStringToEnum(encoding string) (kafka.Encoding, error) {
 	switch encoding {
 	case "json":
 		return kafka.JSON, nil
-	case "plainText":
+	case "plaintext":
 		return kafka.PlainText, nil
 	case "base64":
 		return kafka.Base64, nil
