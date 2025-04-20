@@ -9,6 +9,16 @@ type Config struct {
 	Password           string   `yaml:"password,omitempty"`
 }
 
+func NewConfig(
+	enabled bool,
+	schemaRegistryURLs []string,
+) *Config {
+	return &Config{
+		Enabled:            enabled,
+		SchemaRegistryURLs: schemaRegistryURLs,
+	}
+}
+
 func (c *Config) Validate() error {
 	if c.Enabled == false {
 		return nil

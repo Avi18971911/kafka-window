@@ -3,6 +3,7 @@ package integration
 import (
 	"encoding/base64"
 	"encoding/json"
+	"github.com/Avi18971911/kafka-window/backend/internal/decoder"
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka"
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka/model"
 	"github.com/IBM/sarama"
@@ -35,7 +36,7 @@ func TestFetchLastMessages(t *testing.T) {
 
 		err := createTopic(admin, topic, numPartitions, replicationFactor)
 		assert.NoError(t, err)
-		plaintextMessages, err := createInitialMessages(topic, 0, kafka.PlainText, 100)
+		plaintextMessages, err := createInitialMessages(topic, 0, decoder.PlainText, 100)
 		assert.NoError(t, err)
 		err = produceMessages(client, plaintextMessages)
 		assert.NoError(t, err)
@@ -45,8 +46,8 @@ func TestFetchLastMessages(t *testing.T) {
 			0,
 			100,
 			100,
-			kafka.PlainText,
-			kafka.PlainText,
+			decoder.PlainText,
+			decoder.PlainText,
 		)
 		assert.NoError(t, err)
 		assert.Len(t, messages, 100)
@@ -84,7 +85,7 @@ func TestFetchLastMessages(t *testing.T) {
 
 		err := createTopic(admin, topic, numPartitions, replicationFactor)
 		assert.NoError(t, err)
-		base64Messages, err := createInitialMessages(topic, 0, kafka.Base64, 100)
+		base64Messages, err := createInitialMessages(topic, 0, decoder.Base64, 100)
 		assert.NoError(t, err)
 		err = produceMessages(client, base64Messages)
 		assert.NoError(t, err)
@@ -94,8 +95,8 @@ func TestFetchLastMessages(t *testing.T) {
 			0,
 			100,
 			100,
-			kafka.Base64,
-			kafka.Base64,
+			decoder.Base64,
+			decoder.Base64,
 		)
 		assert.NoError(t, err)
 		assert.Len(t, messages, 100)
@@ -137,7 +138,7 @@ func TestFetchLastMessages(t *testing.T) {
 
 		err := createTopic(admin, topic, numPartitions, replicationFactor)
 		assert.NoError(t, err)
-		jsonMessages, err := createInitialMessages(topic, 0, kafka.JSON, 100)
+		jsonMessages, err := createInitialMessages(topic, 0, decoder.JSON, 100)
 		assert.NoError(t, err)
 		err = produceMessages(client, jsonMessages)
 		assert.NoError(t, err)
@@ -147,8 +148,8 @@ func TestFetchLastMessages(t *testing.T) {
 			0,
 			100,
 			100,
-			kafka.JSON,
-			kafka.JSON,
+			decoder.JSON,
+			decoder.JSON,
 		)
 		assert.NoError(t, err)
 		assert.Len(t, messages, 100)
@@ -198,7 +199,7 @@ func createTopic(
 func createInitialMessages(
 	topic string,
 	partition int32,
-	encoding kafka.Encoding,
+	encoding decoder.Encoding,
 	numMessages int,
 ) ([]*sarama.ProducerMessage, error) {
 	messages := make([]*sarama.ProducerMessage, numMessages)
@@ -208,7 +209,7 @@ func createInitialMessages(
 		var encodedKey, encodedValue []byte
 		var err error
 		switch encoding {
-		case kafka.JSON:
+		case decoder.JSON:
 			jsonMessage := ValueJSON{
 				Value: messageString,
 			}
@@ -223,10 +224,10 @@ func createInitialMessages(
 			if err != nil {
 				return nil, err
 			}
-		case kafka.PlainText:
+		case decoder.PlainText:
 			encodedKey = []byte(messageString)
 			encodedValue = []byte(messageString)
-		case kafka.Base64:
+		case decoder.Base64:
 			encodedKey = []byte(base64.StdEncoding.EncodeToString([]byte(messageString)))
 			encodedValue = []byte(base64.StdEncoding.EncodeToString([]byte(messageString)))
 		}

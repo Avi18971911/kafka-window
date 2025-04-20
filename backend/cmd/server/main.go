@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"github.com/Avi18971911/kafka-window/backend/internal/avro"
+	messageDecoder "github.com/Avi18971911/kafka-window/backend/internal/decoder"
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka"
 	"github.com/Avi18971911/kafka-window/backend/internal/server/router"
 	"github.com/IBM/sarama"
@@ -36,15 +38,20 @@ func main() {
 	config.ClientID = "kafka-ui"
 	config.Version = sarama.V3_6_0_0
 	config.Consumer.Offsets.Initial = sarama.OffsetOldest
-	kafkaService := kafka.NewKafkaService(logger)
+
+	avroConfig := avro.NewConfig(true, []string{"http://schema-registry:8081"})
+	avroService := avro.NewAvroService(avroConfig)
+	decoder := messageDecoder.NewMessageDecoder(avroService)
+
+	kafkaService := kafka.NewKafkaService(decoder, logger)
 	err = kafkaService.ConnectToCluster(brokers, config)
 	if err != nil {
 		logger.Fatal("could not connect to broker", zap.Error(err))
 	}
 	defer kafkaService.Close()
 	r := router.CreateRouter(context.Background(), kafkaService, logger)
-	logger.Info("Starting query server at :8081")
-	if err := http.ListenAndServe(":8081", r); err != nil {
+	logger.Info("Starting query server at :8085")
+	if err := http.ListenAndServe(":8085", r); err != nil {
 		logger.Fatal("Failed to serve: %v", zap.Error(err))
 	}
 }

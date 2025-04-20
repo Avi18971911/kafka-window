@@ -1,4 +1,4 @@
-package kafka
+package decoder
 
 import (
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka/model"

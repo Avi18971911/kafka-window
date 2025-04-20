@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"github.com/Avi18971911/kafka-window/backend/internal/decoder"
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka/model"
 	"go.uber.org/zap"
 	"unicode"
@@ -12,8 +13,8 @@ import (
 
 func (k *KafkaService) GetLastMessages(
 	topic string,
-	keyEncoding Encoding,
-	messageEncoding Encoding,
+	keyEncoding decoder.Encoding,
+	messageEncoding decoder.Encoding,
 	pageSize int,
 	pageNumber int,
 ) ([]*model.Message, error) {
@@ -68,33 +69,31 @@ func (k *KafkaService) GetLastMessages(
 	return lastMessages, nil
 }
 
-func (k *KafkaService) getEncodingType(rawMessage []byte) (Encoding, error) {
+func (k *KafkaService) getEncodingType(rawMessage []byte) (decoder.Encoding, error) {
 	if len(rawMessage) == 0 {
 		return "", fmt.Errorf("empty message")
 	}
 
-	/*
-		if rawMessage[0] == 0 && len(rawMessage) >= 5 {
-			return Avro, nil
-		}
-	*/
+	if rawMessage[0] == 0 && len(rawMessage) >= 5 {
+		return decoder.Avro, nil
+	}
 
 	trimmed := bytes.TrimSpace(rawMessage)
 
 	if len(trimmed) > 0 && (trimmed[0] == '{' || trimmed[0] == '[') {
-		return JSON, nil
+		return decoder.JSON, nil
 	}
 
 	if utf8.Valid(trimmed) && isMostlyPrintable(trimmed) {
-		return PlainText, nil
+		return decoder.PlainText, nil
 	}
 
 	if isValidBase64(trimmed) {
-		return Base64, nil
+		return decoder.Base64, nil
 	}
 
 	k.logger.Warn("unable to determine encoding type, defaulting to plain text")
-	return PlainText, nil
+	return decoder.PlainText, nil
 }
 
 func isMostlyPrintable(b []byte) bool {

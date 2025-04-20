@@ -2,17 +2,19 @@ package handler
 
 import (
 	"fmt"
-	"github.com/Avi18971911/kafka-window/backend/internal/kafka"
+	"github.com/Avi18971911/kafka-window/backend/internal/decoder"
 )
 
-func mapEncodingStringToEnum(encoding string) (kafka.Encoding, error) {
+func mapEncodingStringToEnum(encoding string) (decoder.Encoding, error) {
 	switch encoding {
 	case "json":
-		return kafka.JSON, nil
+		return decoder.JSON, nil
 	case "plaintext":
-		return kafka.PlainText, nil
+		return decoder.PlainText, nil
 	case "base64":
-		return kafka.Base64, nil
+		return decoder.Base64, nil
+	case "avro":
+		return decoder.Avro, nil
 	default:
 		return "", fmt.Errorf("unsupported encoding: %s", encoding)
 	}

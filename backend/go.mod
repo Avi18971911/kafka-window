@@ -7,6 +7,7 @@ toolchain go1.23.7
 require (
 	github.com/IBM/sarama v1.43.3
 	github.com/gorilla/mux v1.8.1
+	github.com/linkedin/goavro/v2 v2.13.1
 	github.com/stretchr/testify v1.9.0
 	github.com/swaggo/swag v1.16.4
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.35.0

@@ -2,21 +2,25 @@ package kafka
 
 import (
 	"fmt"
+	"github.com/Avi18971911/kafka-window/backend/internal/decoder"
 	"github.com/IBM/sarama"
 	"go.uber.org/zap"
 )
 
 type KafkaService struct {
-	client sarama.Client
-	admin  sarama.ClusterAdmin
-	logger *zap.Logger
+	client  sarama.Client
+	admin   sarama.ClusterAdmin
+	decoder *decoder.MessageDecoder
+	logger  *zap.Logger
 }
 
 func NewKafkaService(
+	decoder *decoder.MessageDecoder,
 	logger *zap.Logger,
 ) *KafkaService {
 	return &KafkaService{
-		logger: logger,
+		decoder: decoder,
+		logger:  logger,
 	}
 }
 

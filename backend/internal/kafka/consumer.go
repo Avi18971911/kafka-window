@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"fmt"
+	"github.com/Avi18971911/kafka-window/backend/internal/decoder"
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka/model"
 	"github.com/IBM/sarama"
 	"go.uber.org/zap"
@@ -62,8 +63,8 @@ func (k *KafkaService) FetchLastMessages(
 	partition int32,
 	distanceFromLatestOffset int,
 	numberMessages int,
-	keyEncoding Encoding,
-	messageEncoding Encoding,
+	keyEncoding decoder.Encoding,
+	messageEncoding decoder.Encoding,
 ) ([]*model.Message, error) {
 	newestOffset, err := k.client.GetOffset(topic, partition, sarama.OffsetNewest)
 	if err != nil {
@@ -110,7 +111,7 @@ func (k *KafkaService) FetchLastMessages(
 	messages := make([]*model.Message, numberMessages)
 	for message := range partitionConsumer.Messages() {
 		timestamp := message.Timestamp
-		decodedPayload, err := DecodeMessage(message.Value, messageEncoding)
+		decodedPayload, err := k.decoder.DecodeMessage(message.Value, messageEncoding)
 		if err != nil {
 			k.logger.Error(
 				"failed to decode message payload, skipping...",
@@ -119,7 +120,7 @@ func (k *KafkaService) FetchLastMessages(
 			)
 			continue
 		}
-		decodedKey, err := DecodeMessage(message.Key, keyEncoding)
+		decodedKey, err := k.decoder.DecodeMessage(message.Key, keyEncoding)
 		if err != nil {
 			k.logger.Error(
 				"failed to decode message key, skipping...",
