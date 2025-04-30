@@ -11,6 +11,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/swaggo/swag v1.16.4
 	github.com/testcontainers/testcontainers-go/modules/kafka v0.35.0
+	github.com/twmb/franz-go/pkg/kmsg v1.11.2
 	github.com/valyala/fastjson v1.6.4
 	go.uber.org/zap v1.27.0
 )

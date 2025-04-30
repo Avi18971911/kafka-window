@@ -15,6 +15,8 @@ func mapEncodingStringToEnum(encoding string) (decoder.Encoding, error) {
 		return decoder.Base64, nil
 	case "avro":
 		return decoder.Avro, nil
+	case "consumerOffset":
+		return decoder.ConsumerOffset, nil
 	default:
 		return "", fmt.Errorf("unsupported encoding: %s", encoding)
 	}

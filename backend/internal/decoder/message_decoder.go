@@ -13,10 +13,11 @@ import (
 type Encoding string
 
 const (
-	JSON      Encoding = "json"
-	PlainText Encoding = "plainText"
-	Base64    Encoding = "base64"
-	Avro      Encoding = "avro"
+	JSON           Encoding = "json"
+	PlainText      Encoding = "plainText"
+	Base64         Encoding = "base64"
+	Avro           Encoding = "avro"
+	ConsumerOffset Encoding = "consumerOffset"
 )
 
 type DecodedPayload struct {

@@ -20,6 +20,7 @@ type Message struct {
 type PayloadType string
 
 const (
-	JSONPayload   PayloadType = "json"
-	StringPayload PayloadType = "string"
+	JSONPayload           PayloadType = "json"
+	StringPayload         PayloadType = "string"
+	ConsumerOffsetPayload PayloadType = "consumerOffset"
 )
