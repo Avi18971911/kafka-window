@@ -41,7 +41,7 @@ func parseFastJSON(value *fastjson.Value) model.JSONValue {
 	}
 }
 
-func ParseString(jsonString string) (model.JSONValue, error) {
+func parseString(jsonString string) (model.JSONValue, error) {
 	p := fastjson.Parser{}
 	value, err := p.Parse(jsonString)
 	if err != nil {

@@ -1,74 +1,71 @@
 package kafka
 
 import (
-	"bytes"
-	"encoding/binary"
-	"encoding/json"
 	"fmt"
-	"github.com/Avi18971911/kafka-window/backend/internal/decoder"
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka/model"
 	"github.com/IBM/sarama"
-	"github.com/twmb/franz-go/pkg/kmsg"
 	"go.uber.org/zap"
 )
 
-func (k *KafkaService) GetLastMessage(
+func (k *KafkaService) GetLastMessagesForTopic(
 	topic string,
-	partition int32,
-) (*sarama.ConsumerMessage, error) {
-	newestOffset, err := k.client.GetOffset(topic, partition, sarama.OffsetNewest)
+	pageSize int,
+	pageNumber int,
+) ([]*model.Message, error) {
+	topicMetaData, err := k.admin.DescribeTopics([]string{topic})
 	if err != nil {
 		k.logger.Error(
-			"failed to get newest offset",
+			"failed to get topic metadata",
 			zap.String("topic", topic),
-			zap.Int32("partition", partition),
 			zap.Error(err),
 		)
-		return nil, fmt.Errorf("failed to get newest offset: %w", err)
+		return nil, err
 	}
-	startOffset := newestOffset - 1
-	if startOffset < 0 {
+	if len(topicMetaData) == 0 {
+		k.logger.Warn(
+			"topic not found",
+			zap.String("topic", topic),
+		)
 		return nil, nil
 	}
-	consumer, err := sarama.NewConsumerFromClient(k.client)
-	if err != nil {
-		k.logger.Error(
-			"failed to create consumer",
-			zap.Error(err),
-		)
-		return nil, fmt.Errorf("failed to create consumer: %w", err)
-	}
-	defer consumer.Close()
-	partitionConsumer, err := consumer.ConsumePartition(topic, partition, startOffset)
-	if err != nil {
-		k.logger.Error(
-			"failed to create partition consumer",
+	topicDetail := topicMetaData[0]
+	if len(topicDetail.Partitions) == 0 {
+		k.logger.Warn(
+			"topic has no partitions",
 			zap.String("topic", topic),
-			zap.Int32("partition", partition),
-			zap.Error(err),
 		)
-		return nil, fmt.Errorf("failed to create partition consumer: %w", err)
+		return nil, nil
 	}
-	defer partitionConsumer.Close()
-	message := <-partitionConsumer.Messages()
-	if message == nil {
-		k.logger.Error(
-			"failed to get message",
-			zap.String("topic", topic),
-			zap.Int32("partition", partition),
+	lastMessages := make([]*model.Message, 0)
+	// TODO: figure out a proper pagination strategy
+	for _, partition := range topicDetail.Partitions {
+		partitionMessages, err := k.getLastMessagesForPartition(
+			topic,
+			partition.ID,
+			pageNumber*pageSize,
+			pageSize,
 		)
-		return nil, fmt.Errorf("failed to get message")
+		if err != nil {
+			k.logger.Error(
+				"failed to fetch last messages",
+				zap.String("topic", topic),
+				zap.Int32("partition", partition.ID),
+				zap.Error(err),
+			)
+			return nil, err
+		}
+		if partitionMessages != nil && len(partitionMessages) > 0 {
+			lastMessages = append(lastMessages, partitionMessages...)
+		}
 	}
-	return message, nil
+	return lastMessages, nil
 }
 
-func (k *KafkaService) FetchLastMessages(
+func (k *KafkaService) getLastMessagesForPartition(
 	topic string,
 	partition int32,
 	distanceFromLatestOffset int,
 	numberMessages int,
-	keyEncoding decoder.Encoding,
-	messageEncoding decoder.Encoding,
 ) ([]*model.Message, error) {
 	newestOffset, err := k.client.GetOffset(topic, partition, sarama.OffsetNewest)
 	if err != nil {
@@ -114,7 +111,7 @@ func (k *KafkaService) FetchLastMessages(
 	i := 0
 	messages := make([]*model.Message, numberMessages)
 	for message := range partitionConsumer.Messages() {
-		decodedMessage, err := k.decodeKeyAndValue(message, messageEncoding, keyEncoding)
+		decodedMessage, err := k.decodeKeyAndValue(message)
 		if err != nil {
 			k.logger.Error(
 				"failed to decode message",
@@ -136,148 +133,36 @@ func (k *KafkaService) FetchLastMessages(
 
 func (k *KafkaService) decodeKeyAndValue(
 	message *sarama.ConsumerMessage,
-	messageEncoding decoder.Encoding,
-	keyEncoding decoder.Encoding,
 ) (decodedMessage *model.Message, err error) {
-	if keyEncoding == decoder.ConsumerOffset || messageEncoding == decoder.ConsumerOffset {
-		if messageEncoding != decoder.ConsumerOffset || keyEncoding != decoder.ConsumerOffset {
-			return nil, fmt.Errorf("both key and value encoding must be ConsumerOffset, not one or the other")
-		}
-		return k.DecodeConsumerOffset(message.Key, message.Value)
-	} else {
-		decodedPayload, err := k.decoder.DecodeMessage(message.Value, messageEncoding)
-		if err != nil {
-			k.logger.Error(
-				"failed to decode message payload, skipping...",
-				zap.String("encoding", string(messageEncoding)),
-				zap.Error(err),
-			)
-			return nil, fmt.Errorf("failed to decode message payload: %w", err)
-		}
-		decodedKey, err := k.decoder.DecodeMessage(message.Key, keyEncoding)
-		if err != nil {
-			k.logger.Error(
-				"failed to decode message key, skipping...",
-				zap.String("encoding", string(keyEncoding)),
-				zap.Error(err),
-			)
-			return nil, fmt.Errorf("failed to decode message key: %w", err)
-		}
-		var decodedKeyJSONPayload *model.JSONValue = nil
-		if decodedKey.Type == model.JSONPayload {
-			decodedKeyJSONPayload = &decodedKey.JSONPayload
-		}
-		var decodedValueJSONPayload *model.JSONValue = nil
-		if decodedPayload.Type == model.JSONPayload {
-			decodedValueJSONPayload = &decodedPayload.JSONPayload
-		}
-		return &model.Message{
-			Topic:            message.Topic,
-			Offset:           message.Offset,
-			Partition:        message.Partition,
-			Key:              decodedKey.Payload,
-			KeyPayloadType:   decodedKey.Type,
-			KeyJsonPayload:   decodedKeyJSONPayload,
-			Value:            decodedPayload.Payload,
-			ValuePayloadType: decodedPayload.Type,
-			ValueJsonPayload: decodedValueJSONPayload,
-			Timestamp:        message.Timestamp,
-		}, nil
+	decodedKeyAndValue, err := k.decoder.DecodeKeyAndValue(message.Topic, message.Key, message.Value)
+	if err != nil {
+		k.logger.Error(
+			"failed to decode key and value",
+			zap.String("topic", message.Topic),
+			zap.Int32("partition", message.Partition),
+			zap.Int64("offset", message.Offset),
+			zap.Error(err),
+		)
+		return nil, fmt.Errorf("failed to decode key and value: %w", err)
 	}
-}
-
-func (k *KafkaService) DecodeConsumerOffset(keyBytes, valueBytes []byte) (*model.Message, error) {
-	if keyBytes == nil {
-		k.logger.Warn("key is nil, skipping record")
-		return nil, nil
+	var decodedKeyJSONPayload *model.JSONValue = nil
+	if decodedKeyAndValue.Key.Type == model.JSONPayload {
+		decodedKeyJSONPayload = &decodedKeyAndValue.Key.JSONPayload
 	}
-
-	keyReader := bytes.NewReader(keyBytes)
-
-	var version int16
-	if err := binary.Read(keyReader, binary.BigEndian, &version); err != nil {
-		k.logger.Error("failed to read key version: %w", zap.Error(err))
-		return nil, fmt.Errorf("failed to read key: %w", err)
+	var decodedValueJSONPayload *model.JSONValue = nil
+	if decodedKeyAndValue.Value.Type == model.JSONPayload {
+		decodedValueJSONPayload = &decodedKeyAndValue.Value.JSONPayload
 	}
-
-	msg := &model.Message{}
-
-	switch version {
-	case 0, 1: // Offset Commit Key
-		offsetCommitKey := kmsg.NewOffsetCommitKey()
-		err := offsetCommitKey.ReadFrom(keyBytes)
-		if err == nil {
-			key, _ := json.Marshal(offsetCommitKey)
-			msg.Key = string(key)
-			jsonVal, err := decoder.ParseString(msg.Key)
-			if err != nil {
-				k.logger.Error("failed to parse consumer offsets key as JSON: %w", zap.Error(err))
-				return nil, fmt.Errorf("failed to parse consumer offsets key as JSON: %w", err)
-			}
-			msg.KeyJsonPayload = &jsonVal
-			msg.KeyPayloadType = model.ConsumerOffsetPayload
-		} else {
-			fmt.Println("Failed to read key:", err)
-			return nil, fmt.Errorf("failed to read key: %w", err)
-		}
-
-		if valueBytes == nil {
-			break
-		}
-		offsetCommitValue := kmsg.NewOffsetCommitValue()
-		err = offsetCommitValue.ReadFrom(valueBytes)
-		if err == nil {
-			val, _ := json.Marshal(offsetCommitValue)
-			msg.Value = string(val)
-			jsonVal, err := decoder.ParseString(msg.Value)
-			if err != nil {
-				k.logger.Error("failed to parse consumer offsets value as JSON: %w", zap.Error(err))
-				return nil, fmt.Errorf("failed to parse consumer offsets value as JSON: %w", err)
-			}
-			msg.ValueJsonPayload = &jsonVal
-			msg.ValuePayloadType = model.ConsumerOffsetPayload
-		} else {
-			fmt.Println("Failed to read value:", err)
-			return nil, fmt.Errorf("failed to read value: %w", err)
-		}
-
-	case 2: // Group Metadata Key
-		metadataKey := kmsg.NewGroupMetadataKey()
-		err := metadataKey.ReadFrom(keyBytes)
-		if err == nil {
-			key, _ := json.Marshal(metadataKey)
-			msg.Key = string(key)
-			jsonVal, err := decoder.ParseString(msg.Key)
-			if err != nil {
-				k.logger.Error("failed to parse consumer offsets key as JSON: %w", zap.Error(err))
-				return nil, fmt.Errorf("failed to parse consumer offsets key as JSON: %w", err)
-			}
-			msg.KeyJsonPayload = &jsonVal
-			msg.KeyPayloadType = model.ConsumerOffsetPayload
-		}
-
-		if valueBytes == nil {
-			break
-		}
-		metadataValue := kmsg.NewGroupMetadataValue()
-		err = metadataValue.ReadFrom(valueBytes)
-		if err == nil {
-			val, _ := json.Marshal(metadataValue)
-			msg.Value = string(val)
-			jsonVal, err := decoder.ParseString(msg.Value)
-			if err != nil {
-				k.logger.Error("failed to parse consumer offsets value as JSON: %w", zap.Error(err))
-				return nil, fmt.Errorf("failed to parse consumer offsets value as JSON: %w", err)
-			}
-			msg.ValueJsonPayload = &jsonVal
-			msg.ValuePayloadType = model.ConsumerOffsetPayload
-		} else {
-			fmt.Println("Failed to read value:", err)
-			return nil, fmt.Errorf("failed to read value: %w", err)
-		}
-	default:
-		fmt.Println("Unknown key version:", version)
-	}
-
-	return msg, nil
+	return &model.Message{
+		Topic:            message.Topic,
+		Offset:           message.Offset,
+		Partition:        message.Partition,
+		Key:              decodedKeyAndValue.Key.Payload,
+		KeyPayloadType:   decodedKeyAndValue.Key.Type,
+		KeyJsonPayload:   decodedKeyJSONPayload,
+		Value:            decodedKeyAndValue.Value.Payload,
+		ValuePayloadType: decodedKeyAndValue.Value.Type,
+		ValueJsonPayload: decodedValueJSONPayload,
+		Timestamp:        message.Timestamp,
+	}, nil
 }

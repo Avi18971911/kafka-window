@@ -41,7 +41,7 @@ func TestFetchLastMessages(t *testing.T) {
 		err = produceMessages(client, plaintextMessages)
 		assert.NoError(t, err)
 
-		messages, err := kafkaService.FetchLastMessages(
+		messages, err := kafkaService.getLastMessagesForPartition(
 			topic,
 			0,
 			100,
@@ -90,7 +90,7 @@ func TestFetchLastMessages(t *testing.T) {
 		err = produceMessages(client, base64Messages)
 		assert.NoError(t, err)
 
-		messages, err := kafkaService.FetchLastMessages(
+		messages, err := kafkaService.getLastMessagesForPartition(
 			topic,
 			0,
 			100,
@@ -143,7 +143,7 @@ func TestFetchLastMessages(t *testing.T) {
 		err = produceMessages(client, jsonMessages)
 		assert.NoError(t, err)
 
-		messages, err := kafkaService.FetchLastMessages(
+		messages, err := kafkaService.getLastMessagesForPartition(
 			topic,
 			0,
 			100,

@@ -78,20 +78,6 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Key encoding (json, plaintext, base64)",
-                        "name": "keyEncoding",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Message encoding (json, plaintext, base64)",
-                        "name": "messageEncoding",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
                         "description": "Page size",
                         "name": "pageSize",
                         "in": "path",
@@ -245,11 +231,13 @@ const docTemplate = `{
             "type": "string",
             "enum": [
                 "json",
-                "string"
+                "string",
+                "consumerOffset"
             ],
             "x-enum-varnames": [
                 "JSONPayload",
-                "StringPayload"
+                "StringPayload",
+                "ConsumerOffsetPayload"
             ]
         },
         "model.RetentionMs": {

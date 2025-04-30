@@ -45,8 +45,6 @@ func AllTopicsHandler(
 // @Accept json
 // @Produce json
 // @Param topic path string true "Topic name"
-// @Param keyEncoding path string true "Key encoding (json, plaintext, base64)"
-// @Param messageEncoding path string true "Message encoding (json, plaintext, base64)"
 // @Param pageSize path string true "Page size"
 // @Param pageNumber path string true "Page number"
 // @Success 200 {array} model.Message "List of messages"
@@ -62,21 +60,7 @@ func TopicMessagesHandler(
 		topic := mux.Vars(r)["topic"]
 		pageSize := r.URL.Query().Get("pageSize")
 		pageNumber := r.URL.Query().Get("pageNumber")
-		keyEncoding := r.URL.Query().Get("keyEncoding")
-		messageEncoding := r.URL.Query().Get("messageEncoding")
 
-		mappedKeyEncoding, err := mapEncodingStringToEnum(keyEncoding)
-		if err != nil {
-			logger.Error("Error encountered when getting encoding", zap.Error(err))
-			HttpError(w, "Couldn't get encoding.", http.StatusBadRequest, logger)
-			return
-		}
-		mappedMessageEncoding, err := mapEncodingStringToEnum(messageEncoding)
-		if err != nil {
-			logger.Error("Error encountered when getting encoding", zap.Error(err))
-			HttpError(w, "Couldn't get encoding.", http.StatusBadRequest, logger)
-			return
-		}
 		intPageSize, err := strconv.Atoi(pageSize)
 		if err != nil {
 			logger.Error("Error encountered when converting page size to int", zap.Error(err))
@@ -89,10 +73,8 @@ func TopicMessagesHandler(
 			HttpError(w, "Couldn't convert page number to int.", http.StatusBadRequest, logger)
 			return
 		}
-		messages, err := kafkaService.GetLastMessages(
+		messages, err := kafkaService.GetLastMessagesForTopic(
 			topic,
-			mappedKeyEncoding,
-			mappedMessageEncoding,
 			intPageSize,
 			intPageNumber,
 		)

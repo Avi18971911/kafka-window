@@ -80,10 +80,12 @@ definitions:
     enum:
     - json
     - string
+    - consumerOffset
     type: string
     x-enum-varnames:
     - JSONPayload
     - StringPayload
+    - ConsumerOffsetPayload
   model.RetentionMs:
     properties:
       indefinite:
@@ -162,16 +164,6 @@ paths:
       - description: Topic name
         in: path
         name: topic
-        required: true
-        type: string
-      - description: Key encoding (json, plaintext, base64)
-        in: path
-        name: keyEncoding
-        required: true
-        type: string
-      - description: Message encoding (json, plaintext, base64)
-        in: path
-        name: messageEncoding
         required: true
         type: string
       - description: Page size
