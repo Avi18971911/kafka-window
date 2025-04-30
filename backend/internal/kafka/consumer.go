@@ -109,7 +109,7 @@ func (k *KafkaService) getLastMessagesForPartition(
 	defer partitionConsumer.Close()
 
 	i := 0
-	messages := make([]*model.Message, numberMessages)
+	messages := make([]*model.Message, 0)
 	for message := range partitionConsumer.Messages() {
 		decodedMessage, err := k.decodeKeyAndValue(message)
 		if err != nil {
@@ -121,7 +121,7 @@ func (k *KafkaService) getLastMessagesForPartition(
 			)
 			continue
 		}
-		messages[i] = decodedMessage
+		messages = append(messages, decodedMessage)
 		i++
 		if i >= numberMessages {
 			break
