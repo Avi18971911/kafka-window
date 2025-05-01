@@ -119,9 +119,9 @@ func (k *KafkaService) getLastMessagesForPartition(
 				zap.Int32("partition", partition),
 				zap.Error(err),
 			)
-			continue
+		} else {
+			messages = append(messages, decodedMessage)
 		}
-		messages = append(messages, decodedMessage)
 		i++
 		if i >= numberMessages {
 			break
