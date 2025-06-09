@@ -9,8 +9,7 @@ import (
 
 func (k *KafkaService) GetLastMessagesForTopic(
 	topic string,
-	pageSize int,
-	pageNumber int,
+	partitionData model.PartitionInput,
 ) ([]*model.Message, error) {
 	topicMetaData, err := k.admin.DescribeTopics([]string{topic})
 	if err != nil {
@@ -37,13 +36,17 @@ func (k *KafkaService) GetLastMessagesForTopic(
 		return nil, nil
 	}
 	lastMessages := make([]*model.Message, 0)
-	// TODO: figure out a proper pagination strategy
 	for _, partition := range topicDetail.Partitions {
-		partitionMessages, err := k.getLastMessagesForPartition(
+		partitionDetails, ok := partitionData.PartitionDetailsMap[partition.ID]
+		if !ok {
+			continue
+		}
+
+		partitionMessages, err := k.getMessagesForPartition(
 			topic,
 			partition.ID,
-			pageNumber*pageSize,
-			pageSize,
+			partitionDetails.StartOffset,
+			partitionDetails.EndOffset,
 		)
 		if err != nil {
 			k.logger.Error(
@@ -61,29 +64,43 @@ func (k *KafkaService) GetLastMessagesForTopic(
 	return lastMessages, nil
 }
 
-func (k *KafkaService) getLastMessagesForPartition(
+func (k *KafkaService) getMessagesForPartition(
 	topic string,
 	partition int32,
-	distanceFromLatestOffset int,
-	numberMessages int,
+	startOffset int64,
+	endOffset int64,
 ) ([]*model.Message, error) {
-	newestOffset, err := k.client.GetOffset(topic, partition, sarama.OffsetNewest)
-	if err != nil {
-		k.logger.Error(
-			"failed to get newest offset",
-			zap.String("topic", topic),
-			zap.Int32("partition", partition),
-			zap.Error(err),
-		)
-		return nil, fmt.Errorf("failed to get newest offset: %w", err)
-	}
-
-	startOffset := newestOffset - int64(distanceFromLatestOffset)
-	if newestOffset == 0 {
-		return nil, nil
-	}
-	if startOffset < 0 {
-		startOffset = 0
+	if startOffset < 0 || endOffset < 0 {
+		newestOffset, err := k.client.GetOffset(topic, partition, sarama.OffsetNewest)
+		if err != nil {
+			k.logger.Error(
+				"failed to get newest offset",
+				zap.String("topic", topic),
+				zap.Int32("partition", partition),
+				zap.Error(err),
+			)
+			return nil, fmt.Errorf("failed to get newest offset: %w", err)
+		}
+		if startOffset < 0 {
+			startOffset = max(1, newestOffset+startOffset)
+		}
+		if endOffset < 0 {
+			endOffset = max(1, newestOffset+endOffset)
+		}
+		if startOffset > endOffset {
+			k.logger.Error(
+				"calculated start offset is greater than end offset",
+				zap.String("topic", topic),
+				zap.Int32("partition", partition),
+				zap.Int64("startOffset", startOffset),
+				zap.Int64("endOffset", endOffset),
+			)
+			return nil, fmt.Errorf(
+				"calculated start offset %d is greater than end offset %d",
+				startOffset,
+				endOffset,
+			)
+		}
 	}
 
 	consumer, err := sarama.NewConsumerFromClient(k.client)
@@ -109,6 +126,7 @@ func (k *KafkaService) getLastMessagesForPartition(
 	defer partitionConsumer.Close()
 
 	i := 0
+	numberMessages := int(endOffset - startOffset)
 	messages := make([]*model.Message, 0)
 	for message := range partitionConsumer.Messages() {
 		decodedMessage, err := k.decodeKeyAndValue(message)
@@ -127,7 +145,6 @@ func (k *KafkaService) getLastMessagesForPartition(
 			break
 		}
 	}
-
 	return messages, nil
 }
 

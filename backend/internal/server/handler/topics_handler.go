@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka"
-	"github.com/gorilla/mux"
+	"github.com/Avi18971911/kafka-window/backend/internal/kafka/model"
+	"github.com/Avi18971911/kafka-window/backend/internal/server/dto"
 	"go.uber.org/zap"
+	"io"
 	"net/http"
-	"strconv"
 )
 
 // AllTopicsHandler creates a handler for getting all topics from a list of brokers.
@@ -44,40 +45,34 @@ func AllTopicsHandler(
 // @Tags topics
 // @Accept json
 // @Produce json
-// @Param topic path string true "Topic name"
-// @Param pageSize path string true "Page size"
-// @Param pageNumber path string true "Page number"
+// @Param topicMessagesInput body dto.TopicMessagesInputDTO true "Topic messages input"
 // @Success 200 {array} model.Message "List of messages"
 // @Failure 400 {object} ErrorMessage "Bad request"
 // @Failure 500 {object} ErrorMessage "Internal server error"
-// @Router /topics/{topic}/messages [get]
+// @Router /topics/messages [post]
 func TopicMessagesHandler(
 	ctx context.Context,
 	kafkaService *kafka.KafkaService,
 	logger *zap.Logger,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		topic := mux.Vars(r)["topic"]
-		pageSize := r.URL.Query().Get("pageSize")
-		pageNumber := r.URL.Query().Get("pageNumber")
+		var req dto.TopicMessagesInputDTO
+		err := json.NewDecoder(r.Body).Decode(&req)
+		if err != nil {
+			HttpError(w, "Invalid request payload", http.StatusBadRequest, logger)
+			return
+		}
 
-		intPageSize, err := strconv.Atoi(pageSize)
-		if err != nil {
-			logger.Error("Error encountered when converting page size to int", zap.Error(err))
-			HttpError(w, "Couldn't convert page size to int.", http.StatusBadRequest, logger)
-			return
-		}
-		intPageNumber, err := strconv.Atoi(pageNumber)
-		if err != nil {
-			logger.Error("Error encountered when converting page number to int", zap.Error(err))
-			HttpError(w, "Couldn't convert page number to int.", http.StatusBadRequest, logger)
-			return
-		}
-		messages, err := kafkaService.GetLastMessagesForTopic(
-			topic,
-			intPageSize,
-			intPageNumber,
-		)
+		defer func(Body io.ReadCloser) {
+			err := Body.Close()
+			if err != nil {
+				logger.Error("Failed to close request body", zap.Error(err))
+			}
+		}(r.Body)
+
+		partitionModel := mapTopicPartitionInputDtoToModel(req.Partitions)
+
+		messages, err := kafkaService.GetLastMessagesForTopic(req.TopicName, partitionModel)
 		if err != nil {
 			logger.Error("Error encountered when getting messages", zap.Error(err))
 			HttpError(w, "Couldn't get messages.", http.StatusInternalServerError, logger)
@@ -90,4 +85,19 @@ func TopicMessagesHandler(
 			return
 		}
 	}
+}
+
+func mapTopicPartitionInputDtoToModel(
+	input []dto.TopicPartitionInputDTO,
+) model.PartitionInput {
+	partitionInput := model.PartitionInput{
+		PartitionDetailsMap: make(map[int32]model.PartitionDetails, len(input)),
+	}
+	for _, partitionInputDto := range input {
+		partitionInput.PartitionDetailsMap[partitionInputDto.Partition] = model.PartitionDetails{
+			StartOffset: partitionInputDto.StartOffset,
+			EndOffset:   partitionInputDto.EndOffset,
+		}
+	}
+	return partitionInput
 }
