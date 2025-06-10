@@ -3,6 +3,7 @@ package handler
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka"
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka/model"
 	"github.com/Avi18971911/kafka-window/backend/internal/server/dto"
@@ -70,6 +71,12 @@ func TopicMessagesHandler(
 			}
 		}(r.Body)
 
+		if err := validateRequest(&req); err != nil {
+			logger.Error("Validation failed for request", zap.Error(err))
+			HttpError(w, err.Error(), http.StatusBadRequest, logger)
+			return
+		}
+
 		partitionModel := mapTopicPartitionInputDtoToModel(req.Partitions)
 
 		messages, err := kafkaService.GetLastMessagesForTopic(req.TopicName, partitionModel)
@@ -85,6 +92,24 @@ func TopicMessagesHandler(
 			return
 		}
 	}
+}
+
+func validateRequest(req *dto.TopicMessagesInputDTO) error {
+	if req.TopicName == "" {
+		return errors.New("topic name is required, but was not provided")
+	}
+	if len(req.Partitions) == 0 {
+		return errors.New("at least one partition is required, but none were provided")
+	}
+	for _, partition := range req.Partitions {
+		if partition.Partition < 0 {
+			return errors.New("partition ID must be a non-negative integer")
+		}
+		if partition.StartOffset > partition.EndOffset {
+			return errors.New("start offset must be less than or equal to end offset")
+		}
+	}
+	return nil
 }
 
 func mapTopicPartitionInputDtoToModel(
