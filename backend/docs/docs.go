@@ -56,8 +56,8 @@ const docTemplate = `{
                 }
             }
         },
-        "/topics/{topic}/messages": {
-            "get": {
+        "/topics/messages": {
+            "post": {
                 "consumes": [
                     "application/json"
                 ],
@@ -70,25 +70,13 @@ const docTemplate = `{
                 "summary": "Get messages from a topic.",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Topic name",
-                        "name": "topic",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Page size",
-                        "name": "pageSize",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Page number",
-                        "name": "pageNumber",
-                        "in": "path",
-                        "required": true
+                        "description": "Topic messages input",
+                        "name": "topicMessagesInput",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.TopicMessagesInputDTO"
+                        }
                     }
                 ],
                 "responses": {
@@ -118,6 +106,48 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.TopicMessagesInputDTO": {
+            "type": "object",
+            "required": [
+                "partitions",
+                "topicName"
+            ],
+            "properties": {
+                "partitions": {
+                    "description": "The Partition request data of the topic to fetch messages from",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/dto.TopicPartitionInputDTO"
+                    }
+                },
+                "topicName": {
+                    "description": "The name of the topic to fetch messages from",
+                    "type": "string"
+                }
+            }
+        },
+        "dto.TopicPartitionInputDTO": {
+            "type": "object",
+            "required": [
+                "endOffset",
+                "partition",
+                "startOffset"
+            ],
+            "properties": {
+                "endOffset": {
+                    "description": "The end offset of the partition to fetch messages from\nNegative if the offset is to be from the latest offset, so for example -30 means 30 messages from the end\n-1 means the latest offset\nInclusive",
+                    "type": "integer"
+                },
+                "partition": {
+                    "description": "The ID of the partition to fetch messages from",
+                    "type": "integer"
+                },
+                "startOffset": {
+                    "description": "The start offset of the partition to fetch messages from\nNegative if the offset is to be from the latest offset, so for example -30 means 30 messages from the end\n-1 means the latest offset\nInclusive",
+                    "type": "integer"
+                }
+            }
+        },
         "handler.ErrorMessage": {
             "type": "object",
             "properties": {

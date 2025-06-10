@@ -1,4 +1,42 @@
 definitions:
+  dto.TopicMessagesInputDTO:
+    properties:
+      partitions:
+        description: The Partition request data of the topic to fetch messages from
+        items:
+          $ref: '#/definitions/dto.TopicPartitionInputDTO'
+        type: array
+      topicName:
+        description: The name of the topic to fetch messages from
+        type: string
+    required:
+    - partitions
+    - topicName
+    type: object
+  dto.TopicPartitionInputDTO:
+    properties:
+      endOffset:
+        description: |-
+          The end offset of the partition to fetch messages from
+          Negative if the offset is to be from the latest offset, so for example -30 means 30 messages from the end
+          -1 means the latest offset
+          Inclusive
+        type: integer
+      partition:
+        description: The ID of the partition to fetch messages from
+        type: integer
+      startOffset:
+        description: |-
+          The start offset of the partition to fetch messages from
+          Negative if the offset is to be from the latest offset, so for example -30 means 30 messages from the end
+          -1 means the latest offset
+          Inclusive
+        type: integer
+    required:
+    - endOffset
+    - partition
+    - startOffset
+    type: object
   handler.ErrorMessage:
     properties:
       message:
@@ -156,26 +194,17 @@ paths:
       summary: Get a list of all topics.
       tags:
       - topics
-  /topics/{topic}/messages:
-    get:
+  /topics/messages:
+    post:
       consumes:
       - application/json
       parameters:
-      - description: Topic name
-        in: path
-        name: topic
+      - description: Topic messages input
+        in: body
+        name: topicMessagesInput
         required: true
-        type: string
-      - description: Page size
-        in: path
-        name: pageSize
-        required: true
-        type: string
-      - description: Page number
-        in: path
-        name: pageNumber
-        required: true
-        type: string
+        schema:
+          $ref: '#/definitions/dto.TopicMessagesInputDTO'
       produces:
       - application/json
       responses:
