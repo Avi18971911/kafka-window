@@ -1,13 +1,18 @@
 package kafka
 
 import (
+	"context"
 	"fmt"
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka/model"
 	"github.com/IBM/sarama"
 	"go.uber.org/zap"
+	"time"
 )
 
+const consumerTimeout = 5 * time.Second
+
 func (k *KafkaService) GetLastMessagesForTopic(
+	ctx context.Context,
 	topic string,
 	partitionData model.PartitionInput,
 ) ([]*model.Message, error) {
@@ -43,6 +48,7 @@ func (k *KafkaService) GetLastMessagesForTopic(
 		}
 
 		partitionMessages, err := k.getMessagesForPartition(
+			ctx,
 			topic,
 			partition.ID,
 			partitionDetails.StartOffset,
@@ -65,6 +71,7 @@ func (k *KafkaService) GetLastMessagesForTopic(
 }
 
 func (k *KafkaService) getMessagesForPartition(
+	ctx context.Context,
 	topic string,
 	partition int32,
 	startOffset int64,
@@ -82,10 +89,10 @@ func (k *KafkaService) getMessagesForPartition(
 			return nil, fmt.Errorf("failed to get newest offset: %w", err)
 		}
 		if startOffset < 0 {
-			startOffset = max(1, newestOffset+startOffset)
+			startOffset = max(0, newestOffset+startOffset)
 		}
 		if endOffset < 0 {
-			endOffset = max(1, newestOffset+endOffset)
+			endOffset = max(0, newestOffset+endOffset)
 		}
 		if startOffset > endOffset {
 			k.logger.Error(
@@ -126,23 +133,41 @@ func (k *KafkaService) getMessagesForPartition(
 	defer partitionConsumer.Close()
 
 	i := 0
-	numberMessages := int(endOffset - startOffset)
+	numberMessages := int(endOffset - startOffset + 1)
 	messages := make([]*model.Message, 0)
-	for message := range partitionConsumer.Messages() {
-		decodedMessage, err := k.decodeKeyAndValue(message)
-		if err != nil {
-			k.logger.Error(
-				"failed to decode message",
-				zap.String("topic", topic),
-				zap.Int32("partition", partition),
-				zap.Error(err),
-			)
-		} else {
-			messages = append(messages, decodedMessage)
-		}
-		i++
-		if i >= numberMessages {
-			break
+	messageCtx, cancel := context.WithTimeout(ctx, consumerTimeout)
+	defer cancel()
+loop:
+	for {
+		select {
+		case message, ok := <-partitionConsumer.Messages():
+			if !ok {
+				k.logger.Warn(
+					"partition consumer messages channel closed",
+					zap.String("topic", topic),
+					zap.Int32("partition", partition),
+				)
+				break loop
+			} else {
+				decodedMessage, err := k.decodeKeyAndValue(message)
+				if err != nil {
+					k.logger.Error(
+						"failed to decode message",
+						zap.String("topic", topic),
+						zap.Int32("partition", partition),
+						zap.Error(err),
+					)
+				} else {
+					messages = append(messages, decodedMessage)
+				}
+				i++
+				if i >= numberMessages {
+					break loop
+				}
+			}
+		case <-messageCtx.Done():
+			k.logger.Info("timeout reached while fetching messages", zap.Error(ctx.Err()))
+			break loop
 		}
 	}
 	return messages, nil

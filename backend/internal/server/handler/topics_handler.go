@@ -79,7 +79,7 @@ func TopicMessagesHandler(
 
 		partitionModel := mapTopicPartitionInputDtoToModel(req.Partitions)
 
-		messages, err := kafkaService.GetLastMessagesForTopic(req.TopicName, partitionModel)
+		messages, err := kafkaService.GetLastMessagesForTopic(ctx, req.TopicName, partitionModel)
 		if err != nil {
 			logger.Error("Error encountered when getting messages", zap.Error(err))
 			HttpError(w, "Couldn't get messages.", http.StatusInternalServerError, logger)
