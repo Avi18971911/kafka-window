@@ -1,5 +1,5 @@
 const routes = {
-    search: { path: '/', label: 'Topics' },
+    search: { path: '/topics', label: 'Topics' },
 }
 
 export default routes
