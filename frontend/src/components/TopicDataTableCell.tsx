@@ -1,13 +1,14 @@
 import React from "react";
 import {TopicDetails} from "../model/TopicDetails.ts";
+import {useNavigate} from "react-router-dom";
 
-type DataTableCellProps = {
+type TopicDataTableCellProps = {
     topicDetails: TopicDetails;
     onToggleExpand: (topic: string) => void;
     expanded: boolean;
 };
 
-const DataTableCell: React.FC<DataTableCellProps> = ({ topicDetails, onToggleExpand, expanded }) => {
+const TopicDataTableCell: React.FC<TopicDataTableCellProps> = ({ topicDetails, onToggleExpand, expanded }) => {
     const isInternalTopic = topicDetails.isInternal ? 'Yes' : 'No';
     const retentionMs =
         topicDetails.retentionMs ?
@@ -35,6 +36,14 @@ const DataTableCell: React.FC<DataTableCellProps> = ({ topicDetails, onToggleExp
             break;
     }
 
+    const navigate = useNavigate();
+
+    const handleTopicClick = () => {
+        navigate(`/topics/${encodeURIComponent(topicDetails.topic)}`, {
+            state: { topicDetails }
+        });
+    }
+
 
     return (
         <>
@@ -53,7 +62,11 @@ const DataTableCell: React.FC<DataTableCellProps> = ({ topicDetails, onToggleExp
                         {expanded ? '▼' : '▶'}
                     </button>
                 </td>
-                <td>{topicDetails.topic}</td>
+                <td>
+                    <button onClick={handleTopicClick} className="topic-link">
+                        {topicDetails.topic}
+                    </button>
+                </td>
                 <td>{topicDetails.numPartitions}</td>
                 <td>{topicDetails.replicationFactor}</td>
                 <td>{cleanupPolicy}</td>
@@ -75,4 +88,4 @@ const DataTableCell: React.FC<DataTableCellProps> = ({ topicDetails, onToggleExp
     );
 };
 
-export default DataTableCell;
+export default TopicDataTableCell;

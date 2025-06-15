@@ -88,6 +88,14 @@ func (k *KafkaService) getMessagesForPartition(
 			)
 			return nil, fmt.Errorf("failed to get newest offset: %w", err)
 		}
+		if newestOffset == 0 {
+			k.logger.Warn(
+				"topic partition has no messages",
+				zap.String("topic", topic),
+				zap.Int32("partition", partition),
+			)
+			return nil, nil
+		}
 		if startOffset < 0 {
 			startOffset = max(0, newestOffset+startOffset)
 		}

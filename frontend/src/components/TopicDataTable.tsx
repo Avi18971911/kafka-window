@@ -1,13 +1,13 @@
 import React from "react";
-import DataTableCell from "./DataTableCell.tsx";
+import TopicDataTableCell from "./TopicDataTableCell.tsx";
 import styles from "../styles/DataTable.module.css";
 import {TopicDetails} from "../model/TopicDetails.ts";
 
-type DataTableProps = {
+type TopicDataTableProps = {
     topics: TopicDetails[]
 }
 
-const DataTable: React.FC<DataTableProps> = ({ topics: topicDetails }) => {
+const TopicDataTable: React.FC<TopicDataTableProps> = ({ topics: topicDetails }) => {
     const [expandedRow, setExpandedRow] = React.useState<string | null>(null);
 
     const toggleExpand = (id: string) => {
@@ -31,7 +31,7 @@ const DataTable: React.FC<DataTableProps> = ({ topics: topicDetails }) => {
                 </thead>
                 <tbody>
                     {topicDetails.map((topicDetails) => (
-                        <DataTableCell
+                        <TopicDataTableCell
                             key={topicDetails.topic}
                             topicDetails={topicDetails}
                             onToggleExpand={toggleExpand}
@@ -44,4 +44,4 @@ const DataTable: React.FC<DataTableProps> = ({ topics: topicDetails }) => {
     );
 }
 
-export default DataTable;
+export default TopicDataTable;

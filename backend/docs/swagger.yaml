@@ -113,6 +113,15 @@ definitions:
         $ref: '#/definitions/model.JSONValue'
       valuePayloadType:
         $ref: '#/definitions/model.PayloadType'
+    required:
+    - key
+    - keyPayloadType
+    - offset
+    - partition
+    - timestamp
+    - topic
+    - value
+    - valuePayloadType
     type: object
   model.PayloadType:
     enum:

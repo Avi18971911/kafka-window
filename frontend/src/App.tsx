@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import Toolbar from "./components/Toolbar.tsx";
 import SearchPage from "./pages/TopicsPage.tsx";
 import {ApiClientProvider} from "./provider/ApiClientProvider.tsx";
+import TopicDetailsPage from "./pages/TopicDetailsPage.tsx";
 
 
 function App() {
@@ -14,6 +15,8 @@ function App() {
                     <div style={{width: '95%', position: 'relative', top: '40px', left: '40px'}}>
                         <Routes>
                             <Route path="/" element={<SearchPage/>}/>
+                            <Route path="/topics" element={<SearchPage/>}/>
+                            <Route path="/topics/:topicName" element={<TopicDetailsPage/>}/>
                         </Routes>
                     </div>
                 </div>

@@ -1,10 +1,10 @@
-import {useEffect, useState} from "react";
+import React, {useEffect, useState} from "react";
 import {useApiClientContext} from "../provider/ApiClientProvider.tsx";
-import DataTable from "../components/DataTable.tsx";
+import TopicDataTable from "../components/TopicDataTable.tsx";
 import {mapModelTopicDetailsToTopicDetails} from "../service/TopicDetailsService.ts";
 import {TopicDetails} from "../model/TopicDetails.ts";
 
-function TopicsPage() {
+const TopicsPage: React.FC = () => {
     const [topics, setTopics] = useState<TopicDetails[]>([])
     const [error, setError] = useState<string | null>(null)
     const apiClient = useApiClientContext()
@@ -32,7 +32,7 @@ function TopicsPage() {
                     topics.length ?
                         <div>
                             <div>
-                                <DataTable topics={topics}/>
+                                <TopicDataTable topics={topics}/>
                             </div>
                         </div>
                     :

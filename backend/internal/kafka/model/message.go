@@ -5,16 +5,16 @@ import (
 )
 
 type Message struct {
-	Offset           int64
-	Partition        int32
-	Topic            string
-	Timestamp        time.Time
-	Key              string
-	KeyJsonPayload   *JSONValue
-	KeyPayloadType   PayloadType
-	Value            string
-	ValueJsonPayload *JSONValue
-	ValuePayloadType PayloadType
+	Offset           int64       `json:"offset" validate:"required"`
+	Partition        int32       `json:"partition" validate:"required"`
+	Topic            string      `json:"topic" validate:"required"`
+	Timestamp        time.Time   `json:"timestamp" validate:"required"`
+	Key              string      `json:"key" validate:"required"`
+	KeyJsonPayload   *JSONValue  `json:"keyJsonPayload"`
+	KeyPayloadType   PayloadType `json:"keyPayloadType" validate:"required"`
+	Value            string      `json:"value" validate:"required"`
+	ValueJsonPayload *JSONValue  `json:"valueJsonPayload"`
+	ValuePayloadType PayloadType `json:"valuePayloadType" validate:"required"`
 }
 
 type PayloadType string

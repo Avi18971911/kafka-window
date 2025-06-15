@@ -224,6 +224,16 @@ const docTemplate = `{
         },
         "model.Message": {
             "type": "object",
+            "required": [
+                "key",
+                "keyPayloadType",
+                "offset",
+                "partition",
+                "timestamp",
+                "topic",
+                "value",
+                "valuePayloadType"
+            ],
             "properties": {
                 "key": {
                     "type": "string"
