@@ -3,7 +3,7 @@ import {MessageDetails} from "../model/MessageDetails.ts";
 
 type MessageDataTableCellProps = {
     messageDetails: MessageDetails;
-    onToggleExpand: (partition: number) => void;
+    onToggleExpand: (partition: number, offset: number) => void;
     expanded: boolean;
 };
 
@@ -13,7 +13,7 @@ const MessageDataTableCell: React.FC<MessageDataTableCellProps> = ({ messageDeta
             <tr>
                 <td>
                     <button
-                        onClick={() => onToggleExpand(messageDetails.partition)}
+                        onClick={() => onToggleExpand(messageDetails.partition, messageDetails.offset)}
                         style={{
                             background: 'none',
                             border: 'none',

@@ -7,10 +7,15 @@ type MessageDataTableProps = {
     messages: MessageDetails[]
 }
 
-const MessageDataTable: React.FC<MessageDataTableProps> = ({ messages }) => {
-    const [expandedRow, setExpandedRow] = React.useState<number | null>(null);
+const mapPartitionAndOffsetToKey = (partition: number, offset: number): string => {
+    return `${partition}-${offset}`;
+}
 
-    const toggleExpand = (id: number) => {
+const MessageDataTable: React.FC<MessageDataTableProps> = ({ messages }) => {
+    const [expandedRow, setExpandedRow] = React.useState<string | null>(null);
+
+    const toggleExpand = (partition: number, offset: number) => {
+        const id = mapPartitionAndOffsetToKey(partition, offset);
         setExpandedRow((prev) => (prev === id ? null : id));
     };
 
@@ -30,10 +35,13 @@ const MessageDataTable: React.FC<MessageDataTableProps> = ({ messages }) => {
                 <tbody>
                     {messages.map((messageDetails) => (
                         <MessageDataTableCell
-                            key={messageDetails.partition}
+                            key={mapPartitionAndOffsetToKey(messageDetails.partition, messageDetails.offset)}
                             messageDetails={messageDetails}
                             onToggleExpand={toggleExpand}
-                            expanded={expandedRow === messageDetails.partition}
+                            expanded={expandedRow === mapPartitionAndOffsetToKey(
+                                messageDetails.partition,
+                                messageDetails.offset,
+                            )}
                         />
                     ))}
                 </tbody>

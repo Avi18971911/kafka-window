@@ -39,7 +39,6 @@ const TopicDetailsPage: React.FC = () => {
             (response) => {
                 const mappedResponse = mapModelMessageToMessage(response)
                 setMessages(mappedResponse)
-                console.log(mappedResponse);
             }
         ).catch(
             (error) => {
