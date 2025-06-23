@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useState} from "react";
 import {MessageDetails} from "../model/MessageDetails.ts";
 import {ExpandedRowState} from "./MessageDataTable.tsx";
 import JsonViewer from "./JsonViewer.tsx";
@@ -11,34 +11,36 @@ type MessageDataTableCellExpandedProps = {
 const MessageDataTableCellExpanded: React.FC<MessageDataTableCellExpandedProps> = (
     { messageDetails, expandedRowState }
 ) => {
-    console.log("Expanded Row State:", expandedRowState);
-    const defaultVal = {
-        'object': 'Object',
-        'key': 'Key',
-        'value': 'Value'
-    }[expandedRowState ?? 'object'] || 'Object';
-    console.log("Default Value:", defaultVal);
-    console.log("Message Details:", messageDetails);
+    const [currentRowState, setCurrentRowState] = useState<ExpandedRowState>(
+        expandedRowState ?? 'object'
+    );
+
+    const handleOnChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        setCurrentRowState(event.target.value.toLowerCase() as ExpandedRowState);
+    };
+
+    const stringCurrentRowState = currentRowState ?? 'object';
+
     return (
         <>
-            <select defaultValue={defaultVal}>
-                <option value="Object"> Object </option>
-                <option value="Key"> Key </option>
-                <option value="Value"> Value </option>
+            <select value={stringCurrentRowState} onChange={handleOnChange}>
+                <option value="object">Object</option>
+                <option value="key">Key</option>
+                <option value="value">Value</option>
             </select>
             {
-                expandedRowState === 'object' ? (
+                currentRowState === 'object' ? (
                     <div className="p-2">
-                        <div className="text-xs text-gray-500 mb-2">Message Details:</div>
+                        <div className="text-xs text-gray-500 mb-2">
+                            {JSON.stringify(messageDetails, null, 10)}
+                        </div>
                     </div>
-                ) : expandedRowState === 'key' ? (
+                ) : currentRowState === 'key' ? (
                     <div className="p-2">
-                        <div className="text-xs text-gray-500 mb-2">Key (JSON):</div>
                         <JsonViewer jsonData={messageDetails.keyJsonPayload} />
                     </div>
-                ) : expandedRowState === 'value' ? (
+                ) : currentRowState === 'value' ? (
                     <div className="p-2">
-                        <div className="text-xs text-gray-500 mb-2">Value (JSON):</div>
                         <JsonViewer jsonData={messageDetails.valueJsonPayload} />
                     </div>
                 ) : (
@@ -48,7 +50,7 @@ const MessageDataTableCellExpanded: React.FC<MessageDataTableCellExpandedProps> 
                 )
             }
         </>
-    )
+    );
 };
 
 export default MessageDataTableCellExpanded;
