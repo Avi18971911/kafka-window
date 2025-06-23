@@ -38,8 +38,6 @@ const TopicDetailsPage: React.FC = () => {
         apiClient.topicsMessagesPost(apiRequest).then(
             (response) => {
                 const mappedResponse = mapModelMessageToMessage(response)
-                console.log("Before mapping:", response);
-                console.log("Mapped Response:", mappedResponse);
                 setMessages(mappedResponse)
             }
         ).catch(

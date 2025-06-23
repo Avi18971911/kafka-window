@@ -38,7 +38,6 @@ const mapJSONValueToNativeType = (value: ModelJSONValue | undefined): JSONValue 
     } else if (value.stringVal !== undefined) {
         return value.stringVal;
     }
-    console.log("Invalid ModelJSONValue:", value);
     return null;
 }
 

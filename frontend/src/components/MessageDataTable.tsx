@@ -19,7 +19,18 @@ const MessageDataTable: React.FC<MessageDataTableProps> = ({ messages }) => {
 
     const toggleExpand = (partition: number, offset: number, rowState: ExpandedRowState) => {
         const id = mapPartitionAndOffsetToKey(partition, offset);
-        setExpandedRow((prev) => (prev === id ? null : id));
+        setExpandedRow(
+            (prev) => {
+                if (prev === id) {
+                    setExpandedRowState((prevState) => (prevState === rowState ? null : rowState));
+                    return null;
+                } else {
+                    setExpandedRowState(rowState);
+                    return id;
+                }
+            }
+        );
+
         setExpandedRowState((prev) => (prev === rowState ? null : rowState));
     };
 

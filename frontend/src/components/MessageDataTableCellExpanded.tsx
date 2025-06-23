@@ -31,9 +31,9 @@ const MessageDataTableCellExpanded: React.FC<MessageDataTableCellExpandedProps> 
             {
                 currentRowState === 'object' ? (
                     <div className="p-2">
-                        <div className="text-xs text-gray-500 mb-2">
-                            {JSON.stringify(messageDetails, null, 10)}
-                        </div>
+                        <pre className="text-xs bg-gray-900 p-3 rounded border overflow-auto max-h-96 max-w-full text-gray-200">
+                            {JSON.stringify(messageDetails, null, 2)}
+                        </pre>
                     </div>
                 ) : currentRowState === 'key' ? (
                     <div className="p-2">

@@ -1,6 +1,7 @@
 import {JSONValue} from "../model/MessageDetails.ts";
 import JsonView from "@uiw/react-json-view";
 import React from "react";
+import {darkTheme} from "@uiw/react-json-view/dark";
 
 type JsonViewerProps = {
     jsonData: JSONValue
@@ -13,6 +14,7 @@ const JsonViewer: React.FC<JsonViewerProps> = (
         return (
             <div>
                 <JsonView
+                    style={darkTheme}
                     value={jsonData}
                     collapsed={2}
                 />
