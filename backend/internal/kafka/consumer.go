@@ -89,11 +89,6 @@ func (k *KafkaService) getMessagesForPartition(
 			return nil, fmt.Errorf("failed to get newest offset: %w", err)
 		}
 		if newestOffset == 0 {
-			k.logger.Warn(
-				"topic partition has no messages",
-				zap.String("topic", topic),
-				zap.Int32("partition", partition),
-			)
 			return nil, nil
 		}
 		if startOffset < 0 {
@@ -196,11 +191,12 @@ func (k *KafkaService) decodeKeyAndValue(
 		return nil, fmt.Errorf("failed to decode key and value: %w", err)
 	}
 	var decodedKeyJSONPayload *model.JSONValue = nil
-	if decodedKeyAndValue.Key.Type == model.JSONPayload {
+	if decodedKeyAndValue.Key.Type == model.JSONPayload || decodedKeyAndValue.Key.Type == model.ConsumerOffsetPayload {
 		decodedKeyJSONPayload = &decodedKeyAndValue.Key.JSONPayload
 	}
 	var decodedValueJSONPayload *model.JSONValue = nil
-	if decodedKeyAndValue.Value.Type == model.JSONPayload {
+	if decodedKeyAndValue.Value.Type == model.JSONPayload ||
+		decodedKeyAndValue.Value.Type == model.ConsumerOffsetPayload {
 		decodedValueJSONPayload = &decodedKeyAndValue.Value.JSONPayload
 	}
 	return &model.Message{

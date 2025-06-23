@@ -1,22 +1,10 @@
 package model
 
 type JSONValue struct {
-	StringVal *string
-	NumberVal *float64
-	BoolVal   *bool
-	NullVal   bool
-	ObjectVal map[string]JSONValue
-	ArrayVal  []JSONValue
-	Type      JSONType
+	StringVal *string              `json:"stringVal,omitempty"`
+	NumberVal *float64             `json:"numberVal,omitempty"`
+	BoolVal   *bool                `json:"boolVal,omitempty"`
+	NullVal   bool                 `json:"nullVal"`
+	ObjectVal map[string]JSONValue `json:"objectVal,omitempty"`
+	ArrayVal  []JSONValue          `json:"arrayVal,omitempty"`
 }
-
-type JSONType string
-
-const (
-	STRING JSONType = "string"
-	NUMBER JSONType = "number"
-	BOOL   JSONType = "bool"
-	OBJECT JSONType = "object"
-	ARRAY  JSONType = "array"
-	NULL   JSONType = "null"
-)

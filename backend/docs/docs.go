@@ -171,25 +171,6 @@ const docTemplate = `{
                 "CleanupPolicyUnknown"
             ]
         },
-        "model.JSONType": {
-            "type": "string",
-            "enum": [
-                "string",
-                "number",
-                "bool",
-                "object",
-                "array",
-                "null"
-            ],
-            "x-enum-varnames": [
-                "STRING",
-                "NUMBER",
-                "BOOL",
-                "OBJECT",
-                "ARRAY",
-                "NULL"
-            ]
-        },
         "model.JSONValue": {
             "type": "object",
             "properties": {
@@ -216,9 +197,6 @@ const docTemplate = `{
                 },
                 "stringVal": {
                     "type": "string"
-                },
-                "type": {
-                    "$ref": "#/definitions/model.JSONType"
                 }
             }
         },

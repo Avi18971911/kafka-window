@@ -54,22 +54,6 @@ definitions:
     - CleanupPolicyCompact
     - CleanupPolicyBoth
     - CleanupPolicyUnknown
-  model.JSONType:
-    enum:
-    - string
-    - number
-    - bool
-    - object
-    - array
-    - "null"
-    type: string
-    x-enum-varnames:
-    - STRING
-    - NUMBER
-    - BOOL
-    - OBJECT
-    - ARRAY
-    - "NULL"
   model.JSONValue:
     properties:
       arrayVal:
@@ -88,8 +72,6 @@ definitions:
         type: object
       stringVal:
         type: string
-      type:
-        $ref: '#/definitions/model.JSONType'
     type: object
   model.Message:
     properties:

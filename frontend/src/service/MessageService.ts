@@ -25,7 +25,7 @@ const mapJSONValueToNativeType = (value: ModelJSONValue | undefined): JSONValue 
         return value.arrayVal.map(mapJSONValueToNativeType);
     } else if (value.boolVal !== undefined) {
         return value.boolVal;
-    } else if (value.nullVal !== undefined) {
+    } else if (value.nullVal !== undefined && value.nullVal) {
         return null;
     } else if (value.numberVal !== undefined) {
         return value.numberVal;
@@ -38,7 +38,8 @@ const mapJSONValueToNativeType = (value: ModelJSONValue | undefined): JSONValue 
     } else if (value.stringVal !== undefined) {
         return value.stringVal;
     }
-    throw new Error("Invalid ModelJSONValue");
+    console.log("Invalid ModelJSONValue:", value);
+    return null;
 }
 
 const mapModelPayloadTypeToPayloadType = (type: ModelPayloadType): PayloadType => {
