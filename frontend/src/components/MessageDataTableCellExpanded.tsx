@@ -30,22 +30,36 @@ const MessageDataTableCellExpanded: React.FC<MessageDataTableCellExpandedProps> 
             </select>
             {
                 currentRowState === 'object' ? (
-                    <div className="p-2">
-                        <pre className="text-xs bg-gray-900 p-3 rounded border overflow-auto max-h-96 max-w-full text-gray-200">
-                            {JSON.stringify(messageDetails, null, 2)}
-                        </pre>
+                    <div style={{ padding: '0.5rem' }}>
+                    <pre style={{
+                        fontSize: '0.75rem',
+                        backgroundColor: 'none',
+                        padding: '0.75rem',
+                        borderRadius: '0.25rem',
+                        border: '1px solid #374151',
+                        color: '#e5e7eb',
+                        whiteSpace: 'pre-wrap'
+                    }}>
+                        {JSON.stringify(messageDetails, null, 2)}
+                    </pre>
                     </div>
                 ) : currentRowState === 'key' ? (
-                    <div className="p-2">
+                    <div style={{ padding: '0.5rem' }}>
                         <JsonViewer jsonData={messageDetails.keyJsonPayload} />
                     </div>
                 ) : currentRowState === 'value' ? (
-                    <div className="p-2">
+                    <div style={{ padding: '0.5rem' }}>
                         <JsonViewer jsonData={messageDetails.valueJsonPayload} />
                     </div>
                 ) : (
-                    <div className="p-2">
-                        <div className="text-xs text-gray-500 mb-2">Select an option to view details</div>
+                    <div style={{ padding: '0.5rem' }}>
+                        <div style={{
+                            fontSize: '0.75rem',
+                            color: '#6b7280',
+                            marginBottom: '0.5rem'
+                        }}>
+                            Select an option to view details
+                        </div>
                     </div>
                 )
             }

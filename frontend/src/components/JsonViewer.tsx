@@ -24,7 +24,7 @@ const JsonViewer: React.FC<JsonViewerProps> = (
 
     return (
         <div>
-            <div className="bg-gray-50 p-2 rounded font-mono text-sm">
+            <div>
                 {jsonData === null ? 'null' : JSON.stringify(jsonData)}
             </div>
         </div>
