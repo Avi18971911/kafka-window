@@ -7,6 +7,11 @@ type JsonViewerProps = {
     jsonData: JSONValue
 }
 
+const customDarkTheme = {
+    ...darkTheme,
+    background: 'none',
+}
+
 const JsonViewer: React.FC<JsonViewerProps> = (
     { jsonData }
 ) => {
@@ -14,7 +19,7 @@ const JsonViewer: React.FC<JsonViewerProps> = (
         return (
             <div>
                 <JsonView
-                    style={darkTheme}
+                    style={customDarkTheme}
                     value={jsonData}
                     collapsed={2}
                 />

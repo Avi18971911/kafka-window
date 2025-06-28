@@ -36,7 +36,6 @@ const MessageDataTableCellExpanded: React.FC<MessageDataTableCellExpandedProps> 
                         backgroundColor: 'none',
                         padding: '0.75rem',
                         borderRadius: '0.25rem',
-                        border: '1px solid #374151',
                         color: '#e5e7eb',
                         whiteSpace: 'pre-wrap'
                     }}>
