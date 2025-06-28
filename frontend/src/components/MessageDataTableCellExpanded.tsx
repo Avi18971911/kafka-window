@@ -15,7 +15,7 @@ const MessageDataTableCellExpanded: React.FC<MessageDataTableCellExpandedProps> 
         expandedRowState ?? 'object'
     );
 
-    const handleOnChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const handleOnChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setCurrentRowState(event.target.value.toLowerCase() as ExpandedRowState);
     };
 
@@ -23,11 +23,27 @@ const MessageDataTableCellExpanded: React.FC<MessageDataTableCellExpandedProps> 
 
     return (
         <>
-            <select value={stringCurrentRowState} onChange={handleOnChange}>
-                <option value="object">Object</option>
-                <option value="key">Key</option>
-                <option value="value">Value</option>
-            </select>
+            <div style={{ display: 'flex', borderBottom: '1px solid #444', marginBottom: '1rem' }}>
+                {['object', 'key', 'value'].map(option => (
+                    <label key={option} style={{
+                        padding: '0.5rem 1rem',
+                        backgroundColor: stringCurrentRowState === option ? '#555' : 'transparent',
+                        color: 'white',
+                        cursor: 'pointer',
+                        borderBottom: stringCurrentRowState === option ? '2px solid #fff' : '2px solid transparent',
+                        textTransform: 'capitalize'
+                    }}>
+                        <input
+                            type="radio"
+                            value={option}
+                            checked={stringCurrentRowState === option}
+                            onChange={handleOnChange}
+                            style={{ display: 'none' }}
+                        />
+                        {option}
+                    </label>
+                ))}
+            </div>
             {
                 currentRowState === 'object' ? (
                     <div style={{ padding: '0.5rem' }}>
