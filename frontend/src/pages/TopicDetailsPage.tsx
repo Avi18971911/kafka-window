@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from "react";
+import React, {useEffect, useMemo, useState} from "react";
 import {useApiClientContext} from "../provider/ApiClientProvider.tsx";
 import {TopicDetails} from "../model/TopicDetails.ts";
 import {PartitionDetails} from "../model/PartitionDetails.ts";
@@ -6,6 +6,7 @@ import {mapModelMessageToMessage} from "../service/MessageService.ts";
 import {MessageDetails} from "../model/MessageDetails.ts";
 import MessageDataTable from "../components/MessageDataTable.tsx";
 import {Link, useLocation} from "react-router-dom";
+import TopicDetailsOptionBar, {partitionNumberOption} from "../components/TopicDetailsOptionBar.tsx";
 
 const defaultStartOffset = -50;
 const defaultEndOffset = -1;
@@ -20,9 +21,22 @@ const TopicDetailsPage: React.FC = () => {
     }));
 
     const [partitionDetails, setPartitionDetails] = useState<PartitionDetails[]>(initialPartitionDetails)
+    const [partitionsToShow, setPartitionsToShow] = useState<number[]>(initialPartitionDetails.map(partition => partition.partition))
     const [messages, setMessages] = useState<MessageDetails[]>([])
     const [error, setError] = useState<string | null>(null)
     const apiClient = useApiClientContext()
+    const partitionProps = useMemo(() =>
+        partitionDetails.map(partition => partition.partition),
+        [partitionDetails]
+    );
+
+    const handlePartitionNumberChange = (partitionNumber: partitionNumberOption) => {
+        if (partitionNumber === 'All') {
+            setPartitionsToShow(partitionDetails.map(partition => partition.partition));
+        } else {
+            setPartitionsToShow([partitionNumber])
+        }
+    }
 
     useEffect(() => {
         if (!topic) {
@@ -47,6 +61,13 @@ const TopicDetailsPage: React.FC = () => {
         )
     }, [apiClient, partitionDetails, topic])
 
+    const messagesToShow = useMemo(() =>
+        messages.filter(message => (
+            partitionsToShow.includes(message.partition)
+        )),
+        [messages, partitionsToShow]
+    )
+
     return (
         <div>
             <h1>{topic?.topic ?? "Topic Not Found"}</h1>
@@ -60,8 +81,12 @@ const TopicDetailsPage: React.FC = () => {
                 :
                     partitionDetails.length ?
                         <div>
+                            <TopicDetailsOptionBar
+                                partitions={partitionProps}
+                                onPartitionChange={handlePartitionNumberChange}
+                            />
                             <div>
-                                <MessageDataTable messages={messages}/>
+                                <MessageDataTable messages={messagesToShow}/>
                             </div>
                         </div>
                     :
