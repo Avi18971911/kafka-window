@@ -14,14 +14,12 @@ const defaultEndOffset = -1;
 const TopicDetailsPage: React.FC = () => {
     const location = useLocation()
     const topic = location.state?.topicDetails as TopicDetails | undefined;
-    const initialPartitionDetails: PartitionDetails[] = Array.from({ length: topic?.numPartitions ?? 0 }, (_, i) => ({
-        partition: i,
-        startOffset: defaultStartOffset,
-        endOffset: defaultEndOffset
-    }));
-
-    const [partitionDetails, setPartitionDetails] = useState<PartitionDetails[]>(initialPartitionDetails)
-    const [partitionsToShow, setPartitionsToShow] = useState<number[]>(initialPartitionDetails.map(partition => partition.partition))
+    const [partitionDetails, setPartitionDetails] = useState<PartitionDetails[]>(
+        getDefaultPartitionDetails(topic?.numPartitions ?? 0)
+    )
+    const [partitionsToShow, setPartitionsToShow] = useState<number[]>(
+        getDefaultPartitionDetails(topic?.numPartitions ?? 0).map (partition => partition.partition)
+    )
     const [messages, setMessages] = useState<MessageDetails[]>([])
     const [error, setError] = useState<string | null>(null)
     const apiClient = useApiClientContext()
@@ -96,6 +94,14 @@ const TopicDetailsPage: React.FC = () => {
             }
         </div>
     )
+}
+
+const getDefaultPartitionDetails = (numPartitions: number): PartitionDetails[] => {
+    return Array.from({ length: numPartitions }, (_, i) => ({
+        partition: i,
+        startOffset: defaultStartOffset,
+        endOffset: defaultEndOffset
+    }));
 }
 
 export default TopicDetailsPage
