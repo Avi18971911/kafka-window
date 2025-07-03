@@ -5,9 +5,12 @@ export type partitionNumberOption = 'All' | number
 type TopicDetailsOptionBarProps = {
     partitions: partitionNumberOption[],
     onPartitionChange: (partition: partitionNumberOption) => void
+    onPartitionDetailsChange: (partition: partitionNumberOption, startOffset: number, endOffset: number) => void
 }
 
-const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = ( { partitions, onPartitionChange } ) => {
+const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
+    { partitions, onPartitionChange, onPartitionDetailsChange }
+) => {
     const handlePartitionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         if (event.target.value === 'All') {
             onPartitionChange('All');

@@ -36,6 +36,24 @@ const TopicDetailsPage: React.FC = () => {
         }
     }
 
+    const handleOffsetChange = (partitionNumber: partitionNumberOption, startOffset: number, endOffset: number) => {
+        if (partitionNumber === 'All') {
+            setPartitionDetails(partitionDetails.map(partition => ({
+                ...partition,
+                startOffset: startOffset,
+                endOffset: endOffset
+            })));
+        } else {
+            setPartitionDetails(partitionDetails.map(partition => (
+                partition.partition === partitionNumber ? {
+                    ...partition,
+                    startOffset: startOffset,
+                    endOffset: endOffset
+                } : partition
+            )));
+        }
+    }
+
     useEffect(() => {
         if (!topic) {
             setError("No topic data found. Please navigate from the topics list.");
@@ -82,6 +100,7 @@ const TopicDetailsPage: React.FC = () => {
                             <TopicDetailsOptionBar
                                 partitions={partitionProps}
                                 onPartitionChange={handlePartitionNumberChange}
+                                onPartitionDetailsChange={handleOffsetChange}
                             />
                             <div>
                                 <MessageDataTable messages={messagesToShow}/>
