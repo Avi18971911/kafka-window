@@ -61,14 +61,47 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
             // For now, we will use the default values
         }
 
+        setOffsetCategory(selectedOption);
         onPartitionDetailsChange(startOffset, endOffset);
         setOffsets({ startOffset, endOffset });
+    }
+
+    const handleNumMessagesChange = (numMessages: number) => {
+        let startOffset = -1;
+        let endOffset = -1;
+
+        switch (offsetCategory) {
+            case 'Latest':
+                startOffset = -1 * numMessages;
+                endOffset = -1;
+                setOffsets({
+                    startOffset: startOffset,
+                    endOffset: endOffset
+                });
+                onPartitionDetailsChange(startOffset, endOffset);
+                break;
+            case 'Earliest':
+                startOffset = 0;
+                endOffset = numMessages - 1;
+                setOffsets({
+                    startOffset: startOffset,
+                    endOffset: endOffset
+                });
+                onPartitionDetailsChange(startOffset, endOffset);
+                break;
+            case 'Custom':
+                // Custom logic can be added here if needed
+                break;
+            default:
+                console.error("Unknown offset category:", offsetCategory);
+        }
     }
 
     const [offsets, setOffsets] = React.useState<offsetState>(
         { startOffset: defaultStartOffset, endOffset: defaultEndOffset }
     );
     const [numMessages, setNumMessages] = React.useState<number>(defaultNumMessages);
+    const [offsetCategory, setOffsetCategory] = React.useState<partitionOffsetOption>('Latest');
 
     return (
         <div
@@ -115,6 +148,34 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
                         ))
                     }
                 </select>
+            </div>
+
+            <div
+                style={{
+                    display: 'flex',
+                    gap: '0.5rem',
+                    alignItems: 'center',
+                    flexDirection: 'column',
+                    fontSize: '0.875rem',
+                }}
+            >
+                Number of Messages
+                <input
+                    type='number'
+                    value={numMessages}
+                    onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        if (!isNaN(value)) {
+                            setNumMessages(value);
+                            setOffsets({
+                                startOffset: -1 * value,
+                                endOffset: -1
+                            });
+                            onPartitionDetailsChange(-1 * value, -1);
+                        }
+                    }}
+                    style={{ width: '80px' }}
+                />
             </div>
         </div>
     )
