@@ -2,11 +2,28 @@ import React from "react";
 
 export type partitionNumberOption = 'All' | number
 
+type partitionOffsetOption = 'Latest' | 'Earliest' | 'Custom'
+
 type TopicDetailsOptionBarProps = {
     partitions: partitionNumberOption[],
     onPartitionChange: (partition: partitionNumberOption) => void
-    onPartitionDetailsChange: (partition: partitionNumberOption, startOffset: number, endOffset: number) => void
+    onPartitionDetailsChange: (startOffset: number, endOffset: number) => void
 }
+
+const partitionOffsetOptions: partitionOffsetOption[] = [
+    'Latest',
+    'Earliest',
+    'Custom',
+]
+
+type offsetState = {
+    startOffset: number,
+    endOffset: number,
+}
+
+const defaultNumMessages = 50;
+const defaultStartOffset = -1*defaultNumMessages;
+const defaultEndOffset = -1;
 
 const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
     { partitions, onPartitionChange, onPartitionDetailsChange }
@@ -27,6 +44,31 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
             onPartitionChange(partitionNumber);
         }
     }
+
+    const handleOffsetChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+        const selectedOption = event.target.value as partitionOffsetOption;
+        let startOffset = defaultStartOffset;
+        let endOffset = defaultEndOffset;
+
+        if (selectedOption === 'Latest') {
+            startOffset = defaultEndOffset - numMessages + 1;
+            endOffset = defaultEndOffset;
+        } else if (selectedOption === 'Earliest') {
+            startOffset = 0;
+            endOffset = numMessages - 1;
+        } else if (selectedOption === 'Custom') {
+            // Custom logic can be added here if needed
+            // For now, we will use the default values
+        }
+
+        onPartitionDetailsChange(startOffset, endOffset);
+        setOffsets({ startOffset, endOffset });
+    }
+
+    const [offsets, setOffsets] = React.useState<offsetState>(
+        { startOffset: defaultStartOffset, endOffset: defaultEndOffset }
+    );
+    const [numMessages, setNumMessages] = React.useState<number>(defaultNumMessages);
 
     return (
         <div
@@ -54,10 +96,26 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
                 </select>
             </div>
 
-            <select>
-                <option value="asc">Ascending</option>
-                <option value="desc">Descending</option>
-            </select>
+            <div
+                style={{
+                    display: 'flex',
+                    gap: '0.5rem',
+                    alignItems: 'center',
+                    flexDirection: 'column',
+                    fontSize: '0.875rem',
+                }}
+            >
+                Offset Range
+                <select defaultValue = 'Latest' onChange={handleOffsetChange}>
+                    {
+                        partitionOffsetOptions.map((option) => (
+                            <option key={option} value={option}>
+                                {option}
+                            </option>
+                        ))
+                    }
+                </select>
+            </div>
         </div>
     )
 }

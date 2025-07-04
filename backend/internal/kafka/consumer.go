@@ -77,20 +77,29 @@ func (k *KafkaService) getMessagesForPartition(
 	startOffset int64,
 	endOffset int64,
 ) ([]*model.Message, error) {
+	newestOffset, err := k.client.GetOffset(topic, partition, sarama.OffsetNewest)
+	if err != nil {
+		k.logger.Error(
+			"failed to get newest offset",
+			zap.String("topic", topic),
+			zap.Int32("partition", partition),
+			zap.Error(err),
+		)
+		return nil, fmt.Errorf("failed to get newest offset: %w", err)
+	}
+	if newestOffset == 0 {
+		return nil, nil
+	}
+
+	if startOffset > 0 {
+		startOffset = min(startOffset, newestOffset-1)
+	}
+
+	if endOffset > 0 {
+		endOffset = min(endOffset, newestOffset-1)
+	}
+
 	if startOffset < 0 || endOffset < 0 {
-		newestOffset, err := k.client.GetOffset(topic, partition, sarama.OffsetNewest)
-		if err != nil {
-			k.logger.Error(
-				"failed to get newest offset",
-				zap.String("topic", topic),
-				zap.Int32("partition", partition),
-				zap.Error(err),
-			)
-			return nil, fmt.Errorf("failed to get newest offset: %w", err)
-		}
-		if newestOffset == 0 {
-			return nil, nil
-		}
 		if startOffset < 0 {
 			startOffset = max(0, newestOffset+startOffset)
 		}
