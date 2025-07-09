@@ -66,13 +66,20 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
         setOffsets({ startOffset, endOffset });
     }
 
-    const handleNumMessagesChange = (numMessages: number) => {
+    const handleNumMessagesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        console.log("Number of messages changed:", event.target.value);
+        const value = parseInt(event.target.value, 10);
+        if (isNaN(value) || value <= 0) {
+            console.error("Invalid number of messages:", event.target.value);
+            return;
+        }
+        setNumMessages(value);
         let startOffset = -1;
         let endOffset = -1;
 
         switch (offsetCategory) {
             case 'Latest':
-                startOffset = -1 * numMessages;
+                startOffset = -1 * value;
                 endOffset = -1;
                 setOffsets({
                     startOffset: startOffset,
@@ -82,7 +89,7 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
                 break;
             case 'Earliest':
                 startOffset = 0;
-                endOffset = numMessages - 1;
+                endOffset = value - 1;
                 setOffsets({
                     startOffset: startOffset,
                     endOffset: endOffset
@@ -163,17 +170,7 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
                 <input
                     type='number'
                     value={numMessages}
-                    onChange={(e) => {
-                        const value = parseInt(e.target.value, 10);
-                        if (!isNaN(value)) {
-                            setNumMessages(value);
-                            setOffsets({
-                                startOffset: -1 * value,
-                                endOffset: -1
-                            });
-                            onPartitionDetailsChange(-1 * value, -1);
-                        }
-                    }}
+                    onChange={handleNumMessagesChange}
                     style={{ width: '80px' }}
                 />
             </div>
