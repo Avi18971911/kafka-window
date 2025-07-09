@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useEffect, useRef} from "react";
 
 export type partitionNumberOption = 'All' | number
 
@@ -28,6 +28,12 @@ const defaultEndOffset = -1;
 const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
     { partitions, onPartitionChange, onPartitionDetailsChange }
 ) => {
+    const [offsets, setOffsets] = React.useState<offsetState>(
+        { startOffset: defaultStartOffset, endOffset: defaultEndOffset }
+    );
+    const [numMessages, setNumMessages] = React.useState<number>(defaultNumMessages);
+    const [offsetCategory, setOffsetCategory] = React.useState<partitionOffsetOption>('Latest');
+
     const handlePartitionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         if (event.target.value === 'All') {
             onPartitionChange('All');
@@ -44,6 +50,7 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
             onPartitionChange(partitionNumber);
         }
     }
+    const debounceTimeoutRef = useRef<number | null>(null);
 
     const handleOffsetChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         const selectedOption = event.target.value as partitionOffsetOption;
@@ -58,7 +65,6 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
             endOffset = numMessages - 1;
         } else if (selectedOption === 'Custom') {
             // Custom logic can be added here if needed
-            // For now, we will use the default values
         }
 
         setOffsetCategory(selectedOption);
@@ -66,13 +72,7 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
         setOffsets({ startOffset, endOffset });
     }
 
-    const handleNumMessagesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const value = parseInt(event.target.value, 10);
-        if (isNaN(value) || value <= 0) {
-            console.error("Invalid number of messages:", event.target.value);
-            return;
-        }
-        setNumMessages(value);
+    const updatePartitionDetailsFromMessagesChange = (value: number) => {
         let startOffset = -1;
         let endOffset = -1;
 
@@ -101,13 +101,34 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
             default:
                 console.error("Unknown offset category:", offsetCategory);
         }
+    };
+
+
+    const handleNumMessagesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(event.target.value, 10);
+        if (isNaN(value) || value <= 0) {
+            console.error("Invalid number of messages:", event.target.value);
+            return;
+        }
+        setNumMessages(value);
+
+        if (debounceTimeoutRef.current) {
+            clearTimeout(debounceTimeoutRef.current);
+        }
+
+        debounceTimeoutRef.current = setTimeout(() => {
+            updatePartitionDetailsFromMessagesChange(value);
+        }, 500);
     }
 
-    const [offsets, setOffsets] = React.useState<offsetState>(
-        { startOffset: defaultStartOffset, endOffset: defaultEndOffset }
-    );
-    const [numMessages, setNumMessages] = React.useState<number>(defaultNumMessages);
-    const [offsetCategory, setOffsetCategory] = React.useState<partitionOffsetOption>('Latest');
+    // Cleanup debounce timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (debounceTimeoutRef.current) {
+                clearTimeout(debounceTimeoutRef.current);
+            }
+        };
+    }, []);
 
     return (
         <div
