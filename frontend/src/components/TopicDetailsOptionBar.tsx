@@ -67,7 +67,6 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
     }
 
     const handleNumMessagesChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        console.log("Number of messages changed:", event.target.value);
         const value = parseInt(event.target.value, 10);
         if (isNaN(value) || value <= 0) {
             console.error("Invalid number of messages:", event.target.value);

@@ -51,22 +51,36 @@ const TopicDetailsPage: React.FC = () => {
             setError("No topic data found. Please navigate from the topics list.");
             return;
         }
+
+        const abortController = new AbortController();
+
         const apiRequest = {
             topicMessagesInput: {
                 topicName: topic.topic,
                 partitions: partitionDetails
             }
         }
-        apiClient.topicsMessagesPost(apiRequest).then(
+        apiClient.topicsMessagesPost(
+            apiRequest,
+            {
+                signal: abortController.signal
+            },
+        ).then(
             (response) => {
                 const mappedResponse = mapModelMessageToMessage(response)
                 setMessages(mappedResponse)
             }
         ).catch(
             (error) => {
-                setError(error.message)
+                if (!abortController.signal.aborted) {
+                    setError(error.message)
+                }
             }
         )
+
+        return () => {
+            abortController.abort();
+        }
     }, [apiClient, partitionDetails, topic])
 
     const messagesToShow = useMemo(() =>
