@@ -6,10 +6,12 @@ import (
 	"github.com/Avi18971911/kafka-window/backend/internal/kafka/model"
 	"github.com/IBM/sarama"
 	"go.uber.org/zap"
+	"sync"
 	"time"
 )
 
 const consumerTimeout = 5 * time.Second
+const partitionWorkerCount = 10
 
 func (k *KafkaService) GetLastMessagesForTopic(
 	ctx context.Context,
@@ -40,43 +42,86 @@ func (k *KafkaService) GetLastMessagesForTopic(
 		)
 		return nil, nil
 	}
+	numValidPartitions := 0
+	for _, partition := range topicDetail.Partitions {
+		_, ok := partitionData.PartitionDetailsMap[partition.ID]
+		if !ok {
+			continue
+		}
+		numValidPartitions++
+	}
+
 	lastMessages := make([]*model.Message, 0)
+	minOfPartitionWorkerCountAndPartitions := min(partitionWorkerCount, numValidPartitions)
+	partitionJobs := make(chan getMessagesForPartitionArgs, minOfPartitionWorkerCountAndPartitions)
+	resultsChannel := make(chan []*model.Message, numValidPartitions)
+
+	var wg sync.WaitGroup
+	for i := 0; i < minOfPartitionWorkerCountAndPartitions; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for args := range partitionJobs {
+				messages, err := k.getMessagesForPartition(ctx, args)
+				if err != nil {
+					k.logger.Error(
+						"failed to fetch messages for partition",
+						zap.String("topic", args.topic),
+						zap.Int32("partition", args.partition),
+						zap.Error(err),
+					)
+					resultsChannel <- nil
+					continue
+				}
+				resultsChannel <- messages
+			}
+		}()
+	}
+
 	for _, partition := range topicDetail.Partitions {
 		partitionDetails, ok := partitionData.PartitionDetailsMap[partition.ID]
 		if !ok {
 			continue
 		}
 
-		partitionMessages, err := k.getMessagesForPartition(
-			ctx,
-			topic,
-			partition.ID,
-			partitionDetails.StartOffset,
-			partitionDetails.EndOffset,
-		)
-		if err != nil {
-			k.logger.Error(
-				"failed to fetch last messages",
-				zap.String("topic", topic),
-				zap.Int32("partition", partition.ID),
-				zap.Error(err),
-			)
-			return nil, err
+		partitionJobs <- getMessagesForPartitionArgs{
+			topic:       topic,
+			partition:   partition.ID,
+			startOffset: partitionDetails.StartOffset,
+			endOffset:   partitionDetails.EndOffset,
 		}
-		if partitionMessages != nil && len(partitionMessages) > 0 {
-			lastMessages = append(lastMessages, partitionMessages...)
+	}
+	close(partitionJobs)
+
+	for i := 0; i < numValidPartitions; i++ {
+		select {
+		case messages := <-resultsChannel:
+			if messages != nil && len(messages) > 0 {
+				lastMessages = append(lastMessages, messages...)
+			}
+		case <-ctx.Done():
+			return lastMessages, ctx.Err()
 		}
 	}
 	return lastMessages, nil
 }
 
+type getMessagesForPartitionArgs struct {
+	topic       string
+	partition   int32
+	startOffset int64
+	endOffset   int64
+}
+
 func (k *KafkaService) getMessagesForPartition(
 	ctx context.Context,
-	topic string,
-	partition int32,
-	startOffset int64,
-	endOffset int64,
+	input getMessagesForPartitionArgs,
 ) ([]*model.Message, error) {
+	topic := input.topic
+	partition := input.partition
+	startOffset := input.startOffset
+	endOffset := input.endOffset
+
 	newestOffset, err := k.client.GetOffset(topic, partition, sarama.OffsetNewest)
 	if err != nil {
 		k.logger.Error(
