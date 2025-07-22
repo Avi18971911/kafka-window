@@ -33,6 +33,7 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
     );
     const [numMessages, setNumMessages] = React.useState<number>(defaultNumMessages);
     const [offsetCategory, setOffsetCategory] = React.useState<partitionOffsetOption>('Latest');
+    const isCustomOffset = offsetCategory === 'Custom';
 
     const handlePartitionChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         if (event.target.value === 'All') {
@@ -64,7 +65,8 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
             startOffset = 0;
             endOffset = numMessages - 1;
         } else if (selectedOption === 'Custom') {
-            // Custom logic can be added here if needed
+            startOffset = offsets.startOffset
+            endOffset = offsets.endOffset;
         }
 
         setOffsetCategory(selectedOption);
@@ -96,7 +98,7 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
                 onPartitionDetailsChange(startOffset, endOffset);
                 break;
             case 'Custom':
-                // Custom logic can be added here if needed
+                // Custom will hide the num messages change logic
                 break;
             default:
                 console.error("Unknown offset category:", offsetCategory);
@@ -129,6 +131,26 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
             }
         };
     }, []);
+
+    const handleStartOffsetChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(event.target.value, 10);
+        if (isNaN(value) || value == 0) {
+            console.error("Invalid start offset:", event.target.value);
+            return;
+        }
+        setOffsets((prev) => ({ ...prev, startOffset: value }));
+        onPartitionDetailsChange(value, offsets.endOffset);
+    }
+
+    const handleEndOffsetChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const value = parseInt(event.target.value, 10);
+        if (isNaN(value) || value == 0) {
+            console.error("Invalid end offset:", event.target.value);
+            return;
+        }
+        setOffsets((prev) => ({ ...prev, endOffset: value }));
+        onPartitionDetailsChange(offsets.startOffset, value);
+    }
 
     return (
         <div
@@ -177,23 +199,72 @@ const TopicDetailsOptionBar: React.FC<TopicDetailsOptionBarProps> = (
                 </select>
             </div>
 
-            <div
-                style={{
-                    display: 'flex',
-                    gap: '0.5rem',
-                    alignItems: 'center',
-                    flexDirection: 'column',
-                    fontSize: '0.875rem',
-                }}
-            >
-                Number of Messages
-                <input
-                    type='number'
-                    value={numMessages}
-                    onChange={handleNumMessagesChange}
-                    style={{ width: '80px' }}
-                />
-            </div>
+            {
+                isCustomOffset ?
+                    <div
+                        style={{
+                            display: 'flex',
+                            gap: '1.0rem',
+                            alignItems: 'center',
+                            flexDirection: 'row',
+                            fontSize: '0.875rem',
+                        }}
+                    >
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: '0.5rem',
+                                alignItems: 'center',
+                                flexDirection: 'column',
+                                fontSize: '0.875rem',
+                            }}
+                        >
+                            Start Offset
+                            <input
+                                type='number'
+                                value={offsets.startOffset}
+                                onChange={handleStartOffsetChange}
+                                style={{ width: '80px' }}
+                            />
+                        </div>
+
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: '0.5rem',
+                                alignItems: 'center',
+                                flexDirection: 'column',
+                                fontSize: '0.875rem',
+                            }}
+                        >
+                            End Offset
+                            <input
+                                type='number'
+                                value={offsets.endOffset}
+                                onChange={handleEndOffsetChange}
+                                style={{ width: '80px' }}
+                            />
+                        </div>
+                    </div>
+                :
+                    <div
+                        style={{
+                            display: 'flex',
+                            gap: '0.5rem',
+                            alignItems: 'center',
+                            flexDirection: 'column',
+                            fontSize: '0.875rem',
+                        }}
+                    >
+                        Number of Messages
+                        <input
+                            type='number'
+                            value={numMessages}
+                            onChange={handleNumMessagesChange}
+                            style={{ width: '80px' }}
+                        />
+                    </div>
+            }
         </div>
     )
 }
